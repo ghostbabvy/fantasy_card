@@ -34,6 +34,7 @@ export interface Deck {
 export interface BattleCard extends Card {
   instanceId: string
   currentHp: number
+  currentAttack: number
   canAttack: boolean
   hasAttackedThisTurn: boolean
 }

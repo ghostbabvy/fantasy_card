@@ -25,13 +25,18 @@ interface BattleState {
 }
 
 function createBattleCard(card: Card): BattleCard {
+  // Get attack power from first attack, or 0 if no attacks
+  const attackPower = card.attacks && card.attacks.length > 0
+    ? card.attacks[0].damage
+    : 0
+
   return {
     ...card,
     instanceId: `${card.id}_${Date.now()}_${Math.random()}`,
     currentHp: card.hp || 0,
-    currentAttack: card.attack || 0,
+    currentAttack: attackPower,
     canAttack: false,
-    buffs: []
+    hasAttackedThisTurn: false
   }
 }
 
@@ -167,34 +172,6 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       const fieldCard = { ...card, canAttack: false }
       newPlayer.field = [...newPlayer.field, fieldCard]
       newLog.push(`You played ${card.name}`)
-
-      // Handle onPlay abilities
-      if (card.ability?.trigger === 'onPlay') {
-        // Simplified ability handling
-        if (card.ability.effect.type === 'damage') {
-          const enemy = { ...state.enemy! }
-          if (card.ability.effect.target === 'allEnemies') {
-            enemy.field = enemy.field.map(c => ({
-              ...c,
-              currentHp: c.currentHp - card.ability!.effect.amount
-            })).filter(c => c.currentHp > 0)
-            newLog.push(`${card.name} dealt ${card.ability.effect.amount} damage to all enemies!`)
-          }
-          set({ enemy })
-        } else if (card.ability.effect.type === 'heal' && card.ability.effect.target === 'player') {
-          newPlayer.hp = Math.min(newPlayer.maxHp, newPlayer.hp + card.ability.effect.amount)
-          newLog.push(`${card.name} healed you for ${card.ability.effect.amount}!`)
-        } else if (card.ability.effect.type === 'draw') {
-          for (let i = 0; i < card.ability.effect.amount && newPlayer.deck.length > 0; i++) {
-            const cardId = newPlayer.deck.shift()!
-            const drawnCard = getCardById(cardId)
-            if (drawnCard && newPlayer.hand.length < 7) {
-              newPlayer.hand.push(createBattleCard(drawnCard))
-            }
-          }
-          newLog.push(`${card.name} let you draw ${card.ability.effect.amount} card(s)!`)
-        }
-      }
     } else if (card.type === 'spell') {
       // Handle spell effects (simplified)
       newLog.push(`You cast ${card.name}`)
@@ -277,16 +254,8 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     const state = get()
     if (!state.player || !state.enemy) return
 
-    // End of turn effects for player
+    // Start processing turn
     const newPlayer = { ...state.player }
-    newPlayer.field = newPlayer.field.map(card => {
-      if (card.ability?.trigger === 'endOfTurn') {
-        if (card.ability.effect.type === 'heal' && card.ability.effect.target === 'self') {
-          return { ...card, currentHp: Math.min(card.hp || 0, card.currentHp + card.ability.effect.amount) }
-        }
-      }
-      return card
-    })
 
     // AI Turn
     const newEnemy = { ...state.enemy }

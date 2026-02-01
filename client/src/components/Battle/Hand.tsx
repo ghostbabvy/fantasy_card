@@ -9,7 +9,7 @@ interface HandProps {
 }
 
 export default function Hand({ cards, mana }: HandProps) {
-  const { playCard, selectedCardIndex, selectCard } = useBattleStore()
+  const { playCard, selectedCardIndex } = useBattleStore()
 
   const handleCardClick = (index: number) => {
     const card = cards[index]
