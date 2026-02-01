@@ -33,6 +33,15 @@ const packs: PackType[] = [
     icon: '🎁'
   },
   {
+    id: 'mega',
+    name: 'Mega Pack',
+    cost: 500,
+    cardCount: 10,
+    guarantee: '2 Rare+',
+    color: 'from-purple-500 to-pink-600',
+    icon: '✨'
+  },
+  {
     id: 'legendary',
     name: 'Legendary Pack',
     cost: 1000,

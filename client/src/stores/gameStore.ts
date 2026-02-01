@@ -138,9 +138,10 @@ export const variantMultipliers: Record<CardVariant, number> = {
 }
 
 // Pack configurations
-const packConfigs: Record<string, { cost: number; cardCount: number; minRarity: Rarity }> = {
+const packConfigs: Record<string, { cost: number; cardCount: number; minRarity: Rarity; guaranteedCount?: number }> = {
   basic: { cost: 100, cardCount: 3, minRarity: 'uncommon' },
   premium: { cost: 300, cardCount: 5, minRarity: 'rare' },
+  mega: { cost: 500, cardCount: 10, minRarity: 'rare', guaranteedCount: 2 },
   legendary: { cost: 1000, cardCount: 5, minRarity: 'epic' },
   free: { cost: 0, cardCount: 3, minRarity: 'common' }
 }
@@ -468,8 +469,9 @@ export const useGameStore = create<GameState>()(
         const isPityTriggered = pity >= 49
 
         // Roll cards
+        const guaranteedCount = config.guaranteedCount || 1
         for (let i = 0; i < config.cardCount; i++) {
-          const isGuaranteed = i === 0
+          const isGuaranteed = i < guaranteedCount
           const isPityCard = i === 0 && isPityTriggered
 
           let rarity: Rarity
