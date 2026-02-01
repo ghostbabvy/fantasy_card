@@ -198,7 +198,7 @@ export default function ShopPage() {
             className={`bg-gradient-to-br ${pack.color} rounded-2xl p-6 text-center relative overflow-hidden`}
           >
             {/* Decorative glow */}
-            <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity pointer-events-none" />
 
             <div className="text-6xl mb-4">{pack.icon}</div>
             <h3 className="text-2xl font-bold mb-2">{pack.name}</h3>
@@ -208,7 +208,7 @@ export default function ShopPage() {
             <button
               onClick={() => handleBuyPack(pack)}
               disabled={coins < pack.cost}
-              className={`w-full py-3 rounded-xl font-bold text-lg transition-all ${
+              className={`relative z-10 w-full py-3 rounded-xl font-bold text-lg transition-all ${
                 coins >= pack.cost
                   ? 'bg-white text-gray-900 hover:bg-white/90'
                   : 'bg-white/30 text-white/50 cursor-not-allowed'
