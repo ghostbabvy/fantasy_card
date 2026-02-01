@@ -129,8 +129,8 @@ const dustValues: Record<Rarity, { disenchant: number; craft: number }> = {
   legendary: { disenchant: 1600, craft: 3200 }
 }
 
-// Variant dust multipliers
-const variantMultipliers: Record<CardVariant, number> = {
+// Variant dust multipliers (for future use)
+export const variantMultipliers: Record<CardVariant, number> = {
   normal: 1,
   holo: 2,
   fullart: 4,

@@ -19,13 +19,16 @@ export default function BattlePage() {
   const [deckName, setDeckName] = useState('')
   const [editingDeckId, setEditingDeckId] = useState<string | null>(null)
 
-  const ownedCards = cards.filter(card => collection[card.id] > 0)
+  const ownedCards = cards.filter(card => {
+    const owned = collection[card.id]
+    return owned && owned.quantity > 0
+  })
 
   const addToDeck = (cardId: string) => {
     if (currentDeck.length >= DECK_SIZE) return
 
     const countInDeck = currentDeck.filter(id => id === cardId).length
-    const owned = collection[cardId] || 0
+    const owned = collection[cardId]?.quantity || 0
     if (countInDeck >= owned) return
 
     setCurrentDeck([...currentDeck, cardId])
@@ -175,7 +178,7 @@ export default function BattlePage() {
           <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {ownedCards.map(card => {
               const countInDeck = currentDeck.filter(id => id === card.id).length
-              const available = (collection[card.id] || 0) - countInDeck
+              const available = (collection[card.id]?.quantity || 0) - countInDeck
 
               return (
                 <motion.div
