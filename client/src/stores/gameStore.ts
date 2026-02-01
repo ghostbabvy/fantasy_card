@@ -806,7 +806,52 @@ export const useGameStore = create<GameState>()(
       }
     }),
     {
-      name: 'fantasy-cards-game'
+      name: 'fantasy-cards-game',
+      version: 2, // Increment this to force migration
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0 || version === 1) {
+          // Migration from old collection format (number) to new format (OwnedCard)
+          const oldCollection = persistedState.collection || {}
+          const newCollection: Record<string, OwnedCard> = {}
+
+          for (const [cardId, value] of Object.entries(oldCollection)) {
+            if (typeof value === 'number') {
+              // Old format: convert number to OwnedCard
+              newCollection[cardId] = {
+                quantity: value,
+                variants: { normal: value, holo: 0, fullart: 0, secret: 0 },
+                isNew: false
+              }
+            } else if (value && typeof value === 'object' && 'quantity' in value) {
+              // Already new format
+              newCollection[cardId] = value as OwnedCard
+            }
+          }
+
+          return {
+            ...persistedState,
+            collection: Object.keys(newCollection).length > 0 ? newCollection : getStarterCollection(),
+            // Add missing fields with defaults
+            freePackTimer: persistedState.freePackTimer || Date.now(),
+            freePacksAvailable: persistedState.freePacksAvailable ?? 2,
+            lastLoginDate: persistedState.lastLoginDate || '',
+            loginStreak: persistedState.loginStreak || 0,
+            dailyRewards: persistedState.dailyRewards || generateDailyRewards(),
+            hasClaimedTodayLogin: persistedState.hasClaimedTodayLogin || false,
+            missions: persistedState.missions || [...generateDailyMissions(), ...generateWeeklyMissions()],
+            lastMissionReset: persistedState.lastMissionReset || getTodayDateString(),
+            stats: persistedState.stats || {
+              battlesWon: 0,
+              battlesPlayed: 0,
+              cardsPlayed: 0,
+              damageDealt: 0,
+              packsOpened: 0,
+              creaturesDefeated: 0
+            }
+          }
+        }
+        return persistedState
+      }
     }
   )
 )
