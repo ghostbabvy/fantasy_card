@@ -73,12 +73,19 @@ export default function ShopPage() {
   }, [freePackTimer, freePacksAvailable])
 
   const handleBuyPack = (pack: PackType) => {
-    if (coins < pack.cost) return
+    console.log('Attempting to buy pack:', pack.id, 'Coins:', coins, 'Cost:', pack.cost)
+    if (coins < pack.cost) {
+      console.log('Not enough coins!')
+      return
+    }
 
     const cards = buyPack(pack.id)
-    if (cards.length > 0) {
+    console.log('Cards received:', cards)
+    if (cards && cards.length > 0) {
       setNewCards(cards)
       setOpeningPack(pack)
+    } else {
+      console.log('No cards returned from buyPack!')
     }
   }
 

@@ -313,6 +313,21 @@ function getTodayDateString(): string {
   return new Date().toISOString().split('T')[0]
 }
 
+// Force reset on version 3 - clear all old data
+const CURRENT_VERSION = 3
+const storedData = localStorage.getItem('fantasy-cards-game')
+if (storedData) {
+  try {
+    const parsed = JSON.parse(storedData)
+    if (!parsed.version || parsed.version < CURRENT_VERSION) {
+      console.log('Resetting game data to new version...')
+      localStorage.removeItem('fantasy-cards-game')
+    }
+  } catch {
+    localStorage.removeItem('fantasy-cards-game')
+  }
+}
+
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
@@ -433,7 +448,15 @@ export const useGameStore = create<GameState>()(
       buyPack: (packType) => {
         const state = get()
         const config = packConfigs[packType]
-        if (!config || state.coins < config.cost) return []
+        console.log('buyPack called:', packType, 'config:', config, 'coins:', state.coins)
+        if (!config) {
+          console.log('No config for pack type:', packType)
+          return []
+        }
+        if (state.coins < config.cost) {
+          console.log('Not enough coins:', state.coins, '<', config.cost)
+          return []
+        }
 
         // Spend coins
         set({ coins: state.coins - config.cost })
@@ -441,7 +464,7 @@ export const useGameStore = create<GameState>()(
         const newCards: Array<{ cardId: string; variant: CardVariant; isNew: boolean }> = []
 
         // Check pity
-        let pity = state.pityCounter
+        let pity = state.pityCounter || 0
         const isPityTriggered = pity >= 49
 
         // Roll cards
@@ -461,9 +484,12 @@ export const useGameStore = create<GameState>()(
           const cardId = getRandomCardOfRarity(rarity)
           const variant = rollVariant()
           const existing = state.collection[cardId]
-          const isNew = !existing || existing.quantity === 0
+          // Handle both old (number) and new (OwnedCard) formats
+          const existingQty = typeof existing === 'number' ? existing : (existing?.quantity || 0)
+          const isNew = existingQty === 0
 
           newCards.push({ cardId, variant, isNew })
+          console.log('Rolled card:', cardId, rarity, variant)
 
           if (rarity === 'legendary') {
             pity = 0
@@ -475,21 +501,38 @@ export const useGameStore = create<GameState>()(
         // Add cards to collection
         const newCollection = { ...state.collection }
         newCards.forEach(({ cardId, variant }) => {
-          const existing = newCollection[cardId] || {
-            quantity: 0,
-            variants: { normal: 0, holo: 0, fullart: 0, secret: 0 },
-            isNew: true
+          const existing = newCollection[cardId]
+          // Handle both old (number) and new (OwnedCard) formats
+          let currentCard: OwnedCard
+          if (!existing) {
+            currentCard = {
+              quantity: 0,
+              variants: { normal: 0, holo: 0, fullart: 0, secret: 0 },
+              isNew: true
+            }
+          } else if (typeof existing === 'number') {
+            // Old format - migrate it
+            currentCard = {
+              quantity: existing,
+              variants: { normal: existing, holo: 0, fullart: 0, secret: 0 },
+              isNew: false
+            }
+          } else {
+            currentCard = existing
           }
+
           newCollection[cardId] = {
-            ...existing,
-            quantity: existing.quantity + 1,
+            ...currentCard,
+            quantity: currentCard.quantity + 1,
             variants: {
-              ...existing.variants,
-              [variant]: (existing.variants[variant] || 0) + 1
+              ...currentCard.variants,
+              [variant]: (currentCard.variants[variant] || 0) + 1
             },
             isNew: true
           }
         })
+
+        console.log('Cards added to collection, returning:', newCards)
 
         // Update missions
         const updatedMissions = state.missions.map(m => {
@@ -807,7 +850,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'fantasy-cards-game',
-      version: 2, // Increment this to force migration
+      version: CURRENT_VERSION,
       migrate: (persistedState: any, version: number) => {
         if (version === 0 || version === 1) {
           // Migration from old collection format (number) to new format (OwnedCard)
