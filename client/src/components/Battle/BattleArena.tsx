@@ -16,7 +16,7 @@ export default function BattleArena() {
     battleLog
   } = useBattleStore()
 
-  const { addCoins, addXp } = useGameStore()
+  const { addCoins, addXp, updateMissionProgress, incrementStat } = useGameStore()
 
   if (!player || !enemy) return null
 
@@ -24,9 +24,12 @@ export default function BattleArena() {
     if (winner === 'player') {
       addCoins(50)
       addXp(50)
+      updateMissionProgress('battle_win', 1)
+      incrementStat('battlesWon')
     } else {
       addXp(20)
     }
+    incrementStat('battlesPlayed')
     endBattle()
   }
 

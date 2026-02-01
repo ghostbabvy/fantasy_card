@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getCardById } from '../data/cards'
+import { CardVariant } from '../stores/gameStore'
 import Card from './Card'
 
 interface PackOpeningProps {
@@ -10,27 +11,49 @@ interface PackOpeningProps {
     color: string
     icon: string
   }
-  cardIds: string[]
+  cards: Array<{ cardId: string; variant: CardVariant; isNew: boolean }>
   onClose: () => void
 }
 
-export default function PackOpening({ packType, cardIds, onClose }: PackOpeningProps) {
+const variantLabels: Record<CardVariant, string> = {
+  normal: '',
+  holo: 'HOLO',
+  fullart: 'FULL ART',
+  secret: 'SECRET RARE'
+}
+
+const variantColors: Record<CardVariant, string> = {
+  normal: '',
+  holo: 'from-cyan-400 to-blue-500',
+  fullart: 'from-purple-400 to-pink-500',
+  secret: 'from-yellow-400 to-amber-500'
+}
+
+export default function PackOpening({ packType, cards, onClose }: PackOpeningProps) {
   const [stage, setStage] = useState<'pack' | 'opening' | 'reveal'>('pack')
   const [revealedIndex, setRevealedIndex] = useState(-1)
   const [allRevealed, setAllRevealed] = useState(false)
 
-  const cards = cardIds.map(id => getCardById(id)).filter(Boolean)
+  const cardData = cards.map(c => ({
+    ...c,
+    card: getCardById(c.cardId)
+  })).filter(c => c.card)
+
+  // Check for special pulls
+  const hasRare = cardData.some(c => c.card && ['rare', 'epic', 'legendary'].includes(c.card.rarity))
+  const hasLegendary = cardData.some(c => c.card?.rarity === 'legendary')
+  const hasSpecialVariant = cardData.some(c => c.variant !== 'normal')
 
   useEffect(() => {
-    if (stage === 'reveal' && revealedIndex < cards.length - 1) {
+    if (stage === 'reveal' && revealedIndex < cardData.length - 1) {
       const timer = setTimeout(() => {
         setRevealedIndex(prev => prev + 1)
-      }, 600)
+      }, 800) // Slower reveal for suspense
       return () => clearTimeout(timer)
-    } else if (stage === 'reveal' && revealedIndex === cards.length - 1) {
-      setTimeout(() => setAllRevealed(true), 500)
+    } else if (stage === 'reveal' && revealedIndex === cardData.length - 1) {
+      setTimeout(() => setAllRevealed(true), 600)
     }
-  }, [stage, revealedIndex, cards.length])
+  }, [stage, revealedIndex, cardData.length])
 
   const handlePackClick = () => {
     if (stage === 'pack') {
@@ -38,19 +61,16 @@ export default function PackOpening({ packType, cardIds, onClose }: PackOpeningP
       setTimeout(() => {
         setStage('reveal')
         setRevealedIndex(0)
-      }, 1000)
+      }, 1200)
     }
   }
-
-  const hasRare = cards.some(c => c && ['rare', 'epic', 'legendary'].includes(c.rarity))
-  const hasLegendary = cards.some(c => c?.rarity === 'legendary')
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center"
+      className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
     >
       <AnimatePresence mode="wait">
         {/* Pack Stage */}
@@ -59,45 +79,59 @@ export default function PackOpening({ packType, cardIds, onClose }: PackOpeningP
             key="pack"
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
-            exit={{ scale: 2, opacity: 0 }}
+            exit={{ scale: 2, opacity: 0, rotate: 180 }}
             transition={{ type: 'spring', duration: 0.8 }}
             onClick={handlePackClick}
             className={`
-              w-64 h-80 rounded-2xl cursor-pointer
+              w-72 h-96 rounded-2xl cursor-pointer
               bg-gradient-to-br ${packType.color}
               flex flex-col items-center justify-center
               hover:scale-105 transition-transform
-              shadow-2xl
+              shadow-2xl relative overflow-hidden
             `}
           >
+            {/* Animated glow */}
             <motion.div
-              animate={{ y: [0, -10, 0] }}
+              className="absolute inset-0 bg-white/20"
+              animate={{ opacity: [0, 0.3, 0] }}
               transition={{ repeat: Infinity, duration: 2 }}
-              className="text-8xl mb-4"
+            />
+
+            <motion.div
+              animate={{ y: [0, -15, 0], rotate: [0, 5, -5, 0] }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+              className="text-8xl mb-6"
             >
               {packType.icon}
             </motion.div>
             <h3 className="text-2xl font-bold mb-2">{packType.name}</h3>
-            <p className="text-white/70">Click to open!</p>
+            <motion.p
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="text-white/80"
+            >
+              Tap to open!
+            </motion.p>
 
             {/* Sparkle effects */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
-              {[...Array(10)].map((_, i) => (
+              {[...Array(15)].map((_, i) => (
                 <motion.div
                   key={i}
                   className="absolute w-2 h-2 bg-white rounded-full"
                   initial={{
-                    x: Math.random() * 256,
-                    y: Math.random() * 320,
-                    opacity: 0
+                    x: Math.random() * 288,
+                    y: Math.random() * 384,
+                    opacity: 0,
+                    scale: 0
                   }}
                   animate={{
                     opacity: [0, 1, 0],
-                    scale: [0, 1, 0]
+                    scale: [0, 1.5, 0]
                   }}
                   transition={{
                     repeat: Infinity,
-                    duration: 2,
+                    duration: 2 + Math.random(),
                     delay: Math.random() * 2
                   }}
                 />
@@ -106,128 +140,282 @@ export default function PackOpening({ packType, cardIds, onClose }: PackOpeningP
           </motion.div>
         )}
 
-        {/* Opening Stage */}
+        {/* Opening Stage - Epic burst effect */}
         {stage === 'opening' && (
           <motion.div
             key="opening"
-            className="relative"
+            className="relative flex items-center justify-center"
           >
+            {/* Center explosion */}
             <motion.div
-              animate={{
-                scale: [1, 1.5, 0],
-                rotate: [0, 180, 360]
-              }}
-              transition={{ duration: 1 }}
+              initial={{ scale: 1, opacity: 1 }}
+              animate={{ scale: [1, 3, 0], opacity: [1, 1, 0] }}
+              transition={{ duration: 1.2 }}
               className="w-64 h-80 rounded-2xl bg-white flex items-center justify-center"
             >
-              <span className="text-6xl">✨</span>
+              <motion.span
+                animate={{ rotate: 360, scale: [1, 1.5, 1] }}
+                transition={{ duration: 0.8 }}
+                className="text-8xl"
+              >
+                ✨
+              </motion.span>
             </motion.div>
 
-            {/* Explosion particles */}
-            {[...Array(20)].map((_, i) => (
+            {/* Burst particles */}
+            {[...Array(30)].map((_, i) => {
+              const angle = (i / 30) * Math.PI * 2
+              const distance = 200 + Math.random() * 100
+              return (
+                <motion.div
+                  key={i}
+                  className="absolute w-4 h-4 rounded-full"
+                  style={{
+                    background: hasLegendary
+                      ? `hsl(${45 + Math.random() * 20}, 100%, 50%)`
+                      : hasRare
+                      ? `hsl(${200 + Math.random() * 40}, 100%, 50%)`
+                      : `hsl(${Math.random() * 360}, 70%, 50%)`
+                  }}
+                  initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+                  animate={{
+                    x: Math.cos(angle) * distance,
+                    y: Math.sin(angle) * distance,
+                    scale: 0,
+                    opacity: 0
+                  }}
+                  transition={{ duration: 1, delay: 0.2, ease: 'easeOut' }}
+                />
+              )
+            })}
+
+            {/* Screen flash for legendary */}
+            {hasLegendary && (
               <motion.div
-                key={i}
-                className="absolute w-4 h-4 rounded-full"
-                style={{
-                  background: hasLegendary ? '#f59e0b' : hasRare ? '#3b82f6' : '#9ca3af',
-                  left: '50%',
-                  top: '50%'
-                }}
-                initial={{ x: 0, y: 0, scale: 1 }}
-                animate={{
-                  x: (Math.random() - 0.5) * 400,
-                  y: (Math.random() - 0.5) * 400,
-                  scale: 0,
-                  opacity: [1, 0]
-                }}
-                transition={{ duration: 1, delay: 0.3 }}
+                className="fixed inset-0 bg-yellow-400 pointer-events-none"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.8, 0] }}
+                transition={{ duration: 0.5 }}
               />
-            ))}
+            )}
           </motion.div>
         )}
 
-        {/* Reveal Stage */}
+        {/* Reveal Stage - Cards one by one */}
         {stage === 'reveal' && (
           <motion.div
             key="reveal"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex flex-col items-center"
+            className="flex flex-col items-center max-w-5xl w-full px-4"
           >
             {/* Cards */}
-            <div className="flex gap-4 mb-8 flex-wrap justify-center max-w-4xl">
-              {cards.map((card, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ rotateY: 180, scale: 0 }}
-                  animate={
-                    index <= revealedIndex
-                      ? { rotateY: 0, scale: 1 }
-                      : { rotateY: 180, scale: 0.8 }
-                  }
-                  transition={{
-                    type: 'spring',
-                    duration: 0.6,
-                    delay: index === revealedIndex ? 0 : 0
-                  }}
-                  style={{ perspective: 1000 }}
-                >
-                  {card && (
-                    <div className="relative">
-                      <Card card={card} size="lg" />
+            <div className="flex gap-4 mb-8 flex-wrap justify-center">
+              {cardData.map((item, index) => {
+                const isRevealed = index <= revealedIndex
+                const isCurrentReveal = index === revealedIndex
+                const { card, variant, isNew } = item
 
-                      {/* Special effects for rare+ cards */}
-                      {index <= revealedIndex && card.rarity === 'legendary' && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="absolute inset-0 pointer-events-none"
-                        >
-                          {/* Golden particles */}
-                          {[...Array(15)].map((_, i) => (
+                return (
+                  <motion.div
+                    key={index}
+                    className="relative"
+                    initial={{ rotateY: 180, scale: 0.5, opacity: 0 }}
+                    animate={
+                      isRevealed
+                        ? {
+                            rotateY: 0,
+                            scale: isCurrentReveal ? 1.1 : 1,
+                            opacity: 1
+                          }
+                        : { rotateY: 180, scale: 0.5, opacity: 0.3 }
+                    }
+                    transition={{
+                      type: 'spring',
+                      duration: 0.8,
+                      bounce: 0.3
+                    }}
+                    style={{ perspective: 1000 }}
+                  >
+                    {card && (
+                      <div className="relative">
+                        {/* Card with variant effect overlay */}
+                        <div className="relative">
+                          <Card card={card} size="lg" />
+
+                          {/* Holo shimmer effect */}
+                          {variant === 'holo' && isRevealed && (
                             <motion.div
-                              key={i}
-                              className="absolute w-2 h-2 bg-yellow-400 rounded-full"
-                              style={{
-                                left: `${Math.random() * 100}%`,
-                                top: `${Math.random() * 100}%`
-                              }}
-                              animate={{
-                                y: [0, -50],
-                                opacity: [1, 0],
-                                scale: [1, 0]
-                              }}
-                              transition={{
-                                repeat: Infinity,
-                                duration: 1.5,
-                                delay: Math.random() * 1.5
-                              }}
-                            />
-                          ))}
-                        </motion.div>
-                      )}
+                              className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                            >
+                              <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                                animate={{ x: ['-100%', '200%'] }}
+                                transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+                              />
+                            </motion.div>
+                          )}
 
-                      {/* New badge */}
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full"
-                      >
-                        NEW!
-                      </motion.div>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+                          {/* Full art rainbow effect */}
+                          {variant === 'fullart' && isRevealed && (
+                            <motion.div
+                              className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 0.4 }}
+                            >
+                              <motion.div
+                                className="absolute inset-0"
+                                style={{
+                                  background: 'linear-gradient(45deg, #ff0080, #ff8c00, #40e0d0, #ff0080)',
+                                  backgroundSize: '400% 400%'
+                                }}
+                                animate={{
+                                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+                                }}
+                                transition={{ repeat: Infinity, duration: 3, ease: 'linear' }}
+                              />
+                            </motion.div>
+                          )}
+
+                          {/* Secret rare golden glow */}
+                          {variant === 'secret' && isRevealed && (
+                            <>
+                              <motion.div
+                                className="absolute -inset-2 rounded-2xl pointer-events-none"
+                                style={{
+                                  background: 'linear-gradient(45deg, #ffd700, #ffaa00, #ffd700)',
+                                  filter: 'blur(8px)'
+                                }}
+                                animate={{ opacity: [0.5, 1, 0.5] }}
+                                transition={{ repeat: Infinity, duration: 1.5 }}
+                              />
+                              <motion.div
+                                className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden"
+                              >
+                                {[...Array(10)].map((_, i) => (
+                                  <motion.div
+                                    key={i}
+                                    className="absolute w-1 h-1 bg-yellow-300 rounded-full"
+                                    style={{
+                                      left: `${Math.random() * 100}%`,
+                                      top: `${Math.random() * 100}%`
+                                    }}
+                                    animate={{
+                                      y: [-20, -60],
+                                      opacity: [1, 0],
+                                      scale: [1, 0]
+                                    }}
+                                    transition={{
+                                      repeat: Infinity,
+                                      duration: 1 + Math.random(),
+                                      delay: Math.random()
+                                    }}
+                                  />
+                                ))}
+                              </motion.div>
+                            </>
+                          )}
+
+                          {/* Legendary card effects */}
+                          {card.rarity === 'legendary' && isRevealed && (
+                            <motion.div
+                              className="absolute inset-0 pointer-events-none"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                            >
+                              {[...Array(20)].map((_, i) => (
+                                <motion.div
+                                  key={i}
+                                  className="absolute w-2 h-2 bg-yellow-400 rounded-full"
+                                  style={{
+                                    left: `${Math.random() * 100}%`,
+                                    top: `${Math.random() * 100}%`
+                                  }}
+                                  animate={{
+                                    y: [0, -80],
+                                    opacity: [1, 0],
+                                    scale: [1, 0]
+                                  }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 2,
+                                    delay: Math.random() * 2
+                                  }}
+                                />
+                              ))}
+                            </motion.div>
+                          )}
+                        </div>
+
+                        {/* Variant badge */}
+                        {variant !== 'normal' && isRevealed && (
+                          <motion.div
+                            initial={{ scale: 0, rotate: -20 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{ delay: 0.3, type: 'spring' }}
+                            className={`
+                              absolute -top-3 -left-3 px-2 py-1 rounded-lg
+                              bg-gradient-to-r ${variantColors[variant]}
+                              text-white text-xs font-bold shadow-lg
+                            `}
+                          >
+                            {variantLabels[variant]}
+                          </motion.div>
+                        )}
+
+                        {/* New badge */}
+                        {isNew && isRevealed && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.2, type: 'spring' }}
+                            className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg"
+                          >
+                            NEW!
+                          </motion.div>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                )
+              })}
             </div>
+
+            {/* Summary */}
+            {allRevealed && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center mb-6"
+              >
+                {hasLegendary && (
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ repeat: Infinity, duration: 1 }}
+                    className="text-2xl font-bold text-yellow-400 mb-2"
+                  >
+                    LEGENDARY PULL!
+                  </motion.div>
+                )}
+                {hasSpecialVariant && !hasLegendary && (
+                  <div className="text-xl font-bold text-purple-400 mb-2">
+                    Special Variant Found!
+                  </div>
+                )}
+              </motion.div>
+            )}
 
             {/* Close button */}
             {allRevealed && (
               <motion.button
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onClose}
-                className="px-8 py-3 bg-white text-gray-900 rounded-xl font-bold text-lg hover:bg-white/90 transition-colors"
+                className="px-10 py-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl font-bold text-xl shadow-lg"
               >
                 Collect Cards
               </motion.button>

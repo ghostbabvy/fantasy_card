@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import CollectionPage from './pages/CollectionPage'
 import ShopPage from './pages/ShopPage'
 import BattlePage from './pages/BattlePage'
+import CraftingPage from './pages/CraftingPage'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/collection" element={<CollectionPage />} />
           <Route path="/shop" element={<ShopPage />} />
           <Route path="/battle" element={<BattlePage />} />
+          <Route path="/crafting" element={<CraftingPage />} />
         </Routes>
       </main>
     </div>
