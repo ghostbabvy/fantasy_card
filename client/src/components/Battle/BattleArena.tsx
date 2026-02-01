@@ -152,14 +152,32 @@ export default function BattleArena() {
             <div className="text-center">
               {/* Coin Animation */}
               <motion.div
-                className="text-8xl mb-8"
+                className="mb-8 relative"
                 animate={coinFlipping ? {
                   rotateY: [0, 180, 360, 540, 720, 900, 1080],
                   scale: [1, 1.2, 1, 1.2, 1, 1.2, 1]
                 } : {}}
                 transition={{ duration: 1.5, ease: "easeInOut" }}
+                style={{ transformStyle: 'preserve-3d' }}
               >
-                {coinFlipping ? '🪙' : (coinFlipResult === 'player' ? '😊' : '👹')}
+                {coinFlipping ? (
+                  <div className="w-48 h-48 relative">
+                    <img
+                      src="/coin-player.png"
+                      alt="Coin"
+                      className="w-48 h-48 object-contain"
+                    />
+                  </div>
+                ) : (
+                  <motion.img
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", bounce: 0.5 }}
+                    src={coinFlipResult === 'player' ? '/coin-player.png' : '/coin-enemy.png'}
+                    alt={coinFlipResult === 'player' ? 'You go first!' : 'Enemy goes first!'}
+                    className="w-48 h-48 object-contain"
+                  />
+                )}
               </motion.div>
 
               {/* Result Text */}
