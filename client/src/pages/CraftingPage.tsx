@@ -14,7 +14,7 @@ export default function CraftingPage() {
   const [craftAnimation, setCraftAnimation] = useState(false)
   const [disenchantAnimation, setDisenchantAnimation] = useState(false)
 
-  const elements: Element[] = ['fire', 'water', 'nature', 'earth', 'lightning', 'shadow', 'light']
+  const elements: Element[] = ['fire', 'water', 'nature', 'earth', 'lightning', 'shadow', 'light', 'ice']
   const rarities: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
 
   // Filter cards

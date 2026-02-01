@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useBattleStore } from '../../stores/battleStore'
 import { useGameStore } from '../../stores/gameStore'
 import Hand from './Hand'
@@ -13,10 +14,37 @@ export default function BattleArena() {
     winner,
     endTurn,
     endBattle,
-    battleLog
+    battleLog,
+    showCoinFlip,
+    coinFlipResult,
+    completeCoinFlip
   } = useBattleStore()
 
   const { addCoins, addXp, updateMissionProgress, incrementStat } = useGameStore()
+
+  // Coin flip animation state
+  const [coinFlipping, setCoinFlipping] = useState(true)
+  const [showResult, setShowResult] = useState(false)
+
+  // Handle coin flip animation
+  useEffect(() => {
+    if (showCoinFlip) {
+      setCoinFlipping(true)
+      setShowResult(false)
+
+      // Flip animation duration
+      const flipTimer = setTimeout(() => {
+        setCoinFlipping(false)
+        setShowResult(true)
+      }, 1500)
+
+      return () => clearTimeout(flipTimer)
+    }
+  }, [showCoinFlip])
+
+  const handleCoinFlipComplete = () => {
+    completeCoinFlip()
+  }
 
   if (!player || !enemy) return null
 
@@ -111,6 +139,75 @@ export default function BattleArena() {
           ))}
         </div>
       </div>
+
+      {/* Coin Flip Modal */}
+      <AnimatePresence>
+        {showCoinFlip && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+          >
+            <div className="text-center">
+              {/* Coin Animation */}
+              <motion.div
+                className="text-8xl mb-8"
+                animate={coinFlipping ? {
+                  rotateY: [0, 180, 360, 540, 720, 900, 1080],
+                  scale: [1, 1.2, 1, 1.2, 1, 1.2, 1]
+                } : {}}
+                transition={{ duration: 1.5, ease: "easeInOut" }}
+              >
+                {coinFlipping ? '🪙' : (coinFlipResult === 'player' ? '😊' : '👹')}
+              </motion.div>
+
+              {/* Result Text */}
+              <AnimatePresence>
+                {showResult && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <h2 className="text-4xl font-bold mb-4">
+                      {coinFlipResult === 'player' ? (
+                        <span className="text-green-400">You go first!</span>
+                      ) : (
+                        <span className="text-red-400">Enemy goes first!</span>
+                      )}
+                    </h2>
+                    <p className="text-white/70 mb-6">
+                      {coinFlipResult === 'player'
+                        ? 'Take the initiative and play your cards!'
+                        : 'The enemy will make the first move...'}
+                    </p>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleCoinFlipComplete}
+                      className="px-8 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl font-bold text-lg"
+                    >
+                      Start Battle!
+                    </motion.button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Flipping Text */}
+              {coinFlipping && (
+                <motion.p
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ repeat: Infinity, duration: 0.8 }}
+                  className="text-xl text-white/70"
+                >
+                  Flipping coin...
+                </motion.p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Game Over Modal */}
       {isOver && (

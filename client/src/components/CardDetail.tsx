@@ -62,6 +62,7 @@ export default function CardDetail({ card, quantity, onClose }: CardDetailProps)
           {card.element === 'lightning' && '⚡'}
           {card.element === 'shadow' && '🌑'}
           {card.element === 'light' && '✨'}
+          {card.element === 'ice' && '❄️'}
         </div>
 
         {/* Card Type & HP */}

@@ -13,7 +13,7 @@ export default function CollectionPage() {
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [showOwned, setShowOwned] = useState(true)
 
-  const elements: Element[] = ['fire', 'water', 'nature', 'earth', 'lightning', 'shadow', 'light']
+  const elements: Element[] = ['fire', 'water', 'nature', 'earth', 'lightning', 'shadow', 'light', 'ice']
   const rarities: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
 
   // Filter cards
@@ -75,6 +75,7 @@ export default function CollectionPage() {
                 {stat.element === 'lightning' && '⚡'}
                 {stat.element === 'shadow' && '🌑'}
                 {stat.element === 'light' && '✨'}
+                {stat.element === 'ice' && '❄️'}
               </div>
               <div className="bg-black/40 rounded-full h-2 overflow-hidden mb-1">
                 <motion.div

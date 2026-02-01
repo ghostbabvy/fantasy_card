@@ -87,6 +87,7 @@ export default function Card({
             {card.element === 'lightning' && '⚡'}
             {card.element === 'shadow' && '🌑'}
             {card.element === 'light' && '✨'}
+            {card.element === 'ice' && '❄️'}
           </span>
         </div>
 

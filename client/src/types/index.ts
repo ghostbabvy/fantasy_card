@@ -1,4 +1,4 @@
-export type Element = 'fire' | 'water' | 'nature' | 'earth' | 'lightning' | 'shadow' | 'light'
+export type Element = 'fire' | 'water' | 'nature' | 'earth' | 'lightning' | 'shadow' | 'light' | 'ice'
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
 
@@ -68,7 +68,8 @@ export const elementAdvantages: Record<Element, Element> = {
   earth: 'lightning',
   lightning: 'water',
   shadow: 'light',
-  light: 'shadow'
+  light: 'shadow',
+  ice: 'nature'  // Ice is strong against nature
 }
 
 // Rarity colors
@@ -88,7 +89,8 @@ export const elementColors: Record<Element, string> = {
   earth: '#a16207',
   lightning: '#eab308',
   shadow: '#6b21a8',
-  light: '#fbbf24'
+  light: '#fbbf24',
+  ice: '#67e8f9'  // Cyan/ice blue
 }
 
 // Dust values

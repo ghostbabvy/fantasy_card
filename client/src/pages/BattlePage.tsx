@@ -1,12 +1,15 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useGameStore } from '../stores/gameStore'
 import { useBattleStore } from '../stores/battleStore'
 import { cards } from '../data/cards'
 import Card from '../components/Card'
 import BattleArena from '../components/Battle/BattleArena'
+import { Rarity, Card as CardType } from '../types'
 
 const DECK_SIZE = 20
+const MAX_COPIES = 2
 
 type View = 'menu' | 'deckBuilder' | 'battle'
 
@@ -82,6 +85,57 @@ export default function BattlePage() {
     setView('deckBuilder')
   }
 
+  // Auto-build a balanced deck
+  const autoBuildDeck = () => {
+    const newDeck: string[] = []
+
+    // Score cards - prioritize rarity and balanced cost curve
+    const scoreCard = (card: CardType): number => {
+      let score = 0
+
+      const rarityScores: Record<Rarity, number> = {
+        legendary: 100,
+        epic: 80,
+        rare: 60,
+        uncommon: 40,
+        common: 20
+      }
+      score += rarityScores[card.rarity]
+
+      // Balanced curve scoring
+      if (card.cost <= 2) score += 30
+      else if (card.cost <= 4) score += 40
+      else if (card.cost <= 6) score += 30
+      else score += 15
+
+      if (card.type === 'creature') score += 20
+
+      return score
+    }
+
+    // Get owned cards with scores
+    const scoredCards = ownedCards.map(card => ({
+      card,
+      score: scoreCard(card),
+      owned: collection[card.id]?.quantity || 0
+    })).sort((a, b) => b.score - a.score)
+
+    // Build deck
+    for (const { card, owned } of scoredCards) {
+      if (newDeck.length >= DECK_SIZE) break
+
+      const currentCount = newDeck.filter(id => id === card.id).length
+      const maxCopies = Math.min(MAX_COPIES, owned)
+
+      while (newDeck.filter(id => id === card.id).length < maxCopies && newDeck.length < DECK_SIZE) {
+        newDeck.push(card.id)
+      }
+    }
+
+    setCurrentDeck(newDeck)
+    setDeckName('Auto-Built Deck')
+  }
+
   // If in battle, show the arena
   if (isInBattle) {
     return <BattleArena />
@@ -93,63 +147,84 @@ export default function BattlePage() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold text-center mb-8">Battle Arena</h1>
 
-        {/* Quick Battle with New Deck */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleNewDeck}
-          className="w-full mb-6 p-6 bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl text-left"
-        >
-          <div className="flex items-center gap-4">
+        {/* Main Battle Section - Shows Saved Decks */}
+        <div className="bg-gradient-to-br from-red-900/50 to-orange-900/50 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-red-500/30">
+          <div className="flex items-center gap-4 mb-6">
             <span className="text-5xl">⚔️</span>
             <div>
               <h2 className="text-2xl font-bold">New Battle</h2>
-              <p className="text-white/80">Build a deck and start fighting!</p>
+              <p className="text-white/80">Select a deck to battle with</p>
             </div>
           </div>
-        </motion.button>
 
-        {/* Saved Decks */}
-        {decks.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
-            <h2 className="text-xl font-bold mb-4">Saved Decks</h2>
-            <div className="space-y-3">
+          {/* Saved Decks Grid */}
+          {decks.length > 0 ? (
+            <div className="space-y-3 mb-6">
               {decks.map(deck => (
-                <div
+                <motion.div
                   key={deck.id}
-                  className="flex items-center gap-4 bg-white/10 rounded-xl p-4"
+                  whileHover={{ scale: 1.01 }}
+                  className="flex items-center gap-4 bg-black/30 hover:bg-black/40 rounded-xl p-4 transition-colors"
                 >
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
+                    🃏
+                  </div>
                   <div className="flex-1">
                     <div className="font-bold text-lg">{deck.name}</div>
                     <div className="text-white/50 text-sm">{deck.cards.length} cards</div>
                   </div>
                   <button
                     onClick={() => handleEditDeck(deck.id)}
-                    className="px-4 py-2 bg-blue-500/50 hover:bg-blue-500/70 rounded-lg transition-colors"
+                    className="px-3 py-2 bg-blue-500/50 hover:bg-blue-500/70 rounded-lg transition-colors text-sm"
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => handleSelectSavedDeck(deck.id)}
-                    className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg font-bold transition-colors"
-                  >
-                    Battle!
-                  </button>
-                  <button
                     onClick={() => deleteDeck(deck.id)}
-                    className="px-4 py-2 bg-red-500/50 hover:bg-red-500/70 rounded-lg transition-colors"
+                    className="px-3 py-2 bg-red-500/30 hover:bg-red-500/50 rounded-lg transition-colors text-sm"
                   >
                     Delete
                   </button>
-                </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleSelectSavedDeck(deck.id)}
+                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-lg font-bold transition-colors"
+                  >
+                    Battle!
+                  </motion.button>
+                </motion.div>
               ))}
             </div>
+          ) : (
+            <div className="text-center py-8 mb-6 bg-black/20 rounded-xl">
+              <div className="text-4xl mb-2">📭</div>
+              <p className="text-white/60">No decks yet. Create one to start battling!</p>
+            </div>
+          )}
+
+          {/* Build New Deck Button */}
+          <div className="flex gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleNewDeck}
+              className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+            >
+              <span>➕</span> Build New Deck
+            </motion.button>
+            <Link
+              to="/decks"
+              className="flex-1 py-3 bg-purple-500/30 hover:bg-purple-500/40 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+            >
+              <span>🤖</span> Auto-Build Deck
+            </Link>
           </div>
-        )}
+        </div>
 
         {/* No cards warning */}
         {ownedCards.length < DECK_SIZE && (
-          <div className="mt-6 p-4 bg-yellow-500/20 rounded-xl text-center">
+          <div className="p-4 bg-yellow-500/20 rounded-xl text-center">
             <p className="text-yellow-300">
               You need at least {DECK_SIZE} cards to build a deck.
               Open more packs in the Shop!
@@ -215,6 +290,16 @@ export default function BattlePage() {
           placeholder="Deck name..."
           className="w-full bg-white/20 rounded-lg px-3 py-2 mb-4 text-white placeholder-white/50 border border-white/20 focus:border-white/40 outline-none"
         />
+
+        {/* Auto-Build Button */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={autoBuildDeck}
+          className="w-full py-2 mb-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg font-bold flex items-center justify-center gap-2"
+        >
+          <span>🤖</span> Auto-Build
+        </motion.button>
 
         {/* Deck cards list */}
         <div className="flex-1 overflow-y-auto space-y-1 mb-4">

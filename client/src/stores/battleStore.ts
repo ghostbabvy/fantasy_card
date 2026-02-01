@@ -15,6 +15,11 @@ interface BattleState {
   targetIndex: number | null
   battleLog: string[]
 
+  // Coin flip
+  showCoinFlip: boolean
+  coinFlipResult: 'player' | 'enemy' | null
+  coinFlipComplete: boolean
+
   // Actions
   startBattle: (deckCardIds: string[]) => void
   endBattle: () => void
@@ -22,6 +27,7 @@ interface BattleState {
   attack: (attackerIndex: number, targetIndex: number | 'player') => void
   endTurn: () => void
   selectCard: (index: number | null) => void
+  completeCoinFlip: () => void
 }
 
 function createBattleCard(card: Card): BattleCard {
@@ -120,23 +126,103 @@ export const useBattleStore = create<BattleState>((set, get) => ({
   selectedCardIndex: null,
   targetIndex: null,
   battleLog: [],
+  showCoinFlip: false,
+  coinFlipResult: null,
+  coinFlipComplete: false,
 
   startBattle: (deckCardIds) => {
     const player = createPlayer(deckCardIds)
     const enemy = createPlayer(createAIDeck())
 
+    // 50-50 coin flip to determine who goes first
+    const coinFlipResult: 'player' | 'enemy' = Math.random() < 0.5 ? 'player' : 'enemy'
+
     set({
       isInBattle: true,
       player,
       enemy,
-      turn: 'player',
+      turn: coinFlipResult,
       turnNumber: 1,
       phase: 'main',
       isOver: false,
       winner: null,
       selectedCardIndex: null,
-      battleLog: ['Battle started!']
+      battleLog: [],
+      showCoinFlip: true,
+      coinFlipResult,
+      coinFlipComplete: false
     })
+  },
+
+  completeCoinFlip: () => {
+    const state = get()
+    const newLog = [`Coin flip: ${state.coinFlipResult === 'player' ? 'You go' : 'Enemy goes'} first!`]
+
+    // If enemy goes first, run their turn
+    if (state.coinFlipResult === 'enemy' && state.player && state.enemy) {
+      const newEnemy = { ...state.enemy }
+
+      // Enemy gains mana on their first turn
+      newEnemy.mana = 1
+      newEnemy.maxMana = 1
+
+      // Enemy enables attacks for creatures (none yet on turn 1)
+      newEnemy.field = newEnemy.field.map(c => ({ ...c, canAttack: true }))
+
+      // AI plays a card if possible
+      const playableCards = newEnemy.hand
+        .map((card, index) => ({ card, index }))
+        .filter(({ card }) => card.cost <= newEnemy.mana && (card.type !== 'creature' || newEnemy.field.length < 5))
+        .sort((a, b) => b.card.cost - a.card.cost)
+
+      for (const { card, index } of playableCards) {
+        if (card.cost <= newEnemy.mana) {
+          newEnemy.mana -= card.cost
+          newEnemy.hand = newEnemy.hand.filter((_, i) => i !== index)
+
+          if (card.type === 'creature') {
+            newEnemy.field.push({ ...card, canAttack: false })
+            newLog.push(`Enemy played ${card.name}`)
+          }
+          break
+        }
+      }
+
+      // Now it's player's turn
+      const newPlayer = { ...state.player }
+      newPlayer.maxMana = Math.min(10, newPlayer.maxMana + 1)
+      newPlayer.mana = newPlayer.maxMana
+
+      // Player draws a card
+      if (newPlayer.deck.length > 0 && newPlayer.hand.length < 7) {
+        const cardId = newPlayer.deck.shift()!
+        const card = getCardById(cardId)
+        if (card) {
+          newPlayer.hand.push(createBattleCard(card))
+          newLog.push(`You drew ${card.name}`)
+        }
+      }
+
+      // Player's creatures can now attack
+      newPlayer.field = newPlayer.field.map(c => ({ ...c, canAttack: true }))
+
+      set({
+        showCoinFlip: false,
+        coinFlipComplete: true,
+        player: newPlayer,
+        enemy: newEnemy,
+        turn: 'player',
+        turnNumber: 2,
+        battleLog: newLog
+      })
+    } else {
+      // Player goes first - just start normally
+      set({
+        showCoinFlip: false,
+        coinFlipComplete: true,
+        battleLog: [...newLog, 'Your turn - play your cards!']
+      })
+    }
   },
 
   endBattle: () => {
@@ -146,7 +232,10 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       enemy: null,
       isOver: false,
       winner: null,
-      battleLog: []
+      battleLog: [],
+      showCoinFlip: false,
+      coinFlipResult: null,
+      coinFlipComplete: false
     })
   },
 

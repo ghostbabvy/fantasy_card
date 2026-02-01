@@ -570,6 +570,109 @@ export const cards: Card[] = [
     effect: 'Destroy one enemy creature.',
     description: 'Divine judgment strikes down evil.',
     artwork: '/cards/holy_smite.png'
+  },
+
+  // ===== ICE CARDS =====
+  {
+    id: 'frost_sprite',
+    name: 'Frost Sprite',
+    type: 'creature',
+    element: 'ice',
+    rarity: 'common',
+    cost: 1,
+    hp: 40,
+    attacks: [
+      { name: 'Ice Shard', damage: 15, cost: 1 },
+      { name: 'Chilling Touch', damage: 30, cost: 2, effect: 'Slow: reduce attack by 10' }
+    ],
+    description: 'A tiny spirit of winter frost.',
+    artwork: '/cards/frost_sprite.png'
+  },
+  {
+    id: 'snow_wolf',
+    name: 'Arctic Wolf',
+    type: 'creature',
+    element: 'ice',
+    rarity: 'common',
+    cost: 2,
+    hp: 60,
+    attacks: [
+      { name: 'Frozen Fangs', damage: 25, cost: 1 },
+      { name: 'Blizzard Hunt', damage: 45, cost: 2 }
+    ],
+    description: 'Hunts silently through the frozen tundra.',
+    artwork: '/cards/snow_wolf.png'
+  },
+  {
+    id: 'ice_mage',
+    name: 'Frostweaver',
+    type: 'creature',
+    element: 'ice',
+    rarity: 'uncommon',
+    cost: 3,
+    hp: 70,
+    attacks: [
+      { name: 'Icicle Barrage', damage: 30, cost: 2 },
+      { name: 'Frozen Prison', damage: 40, cost: 2, effect: 'Freeze: skip next attack' }
+    ],
+    description: 'Master of frost magic and winter storms.',
+    artwork: '/cards/ice_mage.png'
+  },
+  {
+    id: 'glacier_giant',
+    name: 'Glacier Behemoth',
+    type: 'creature',
+    element: 'ice',
+    rarity: 'rare',
+    cost: 5,
+    hp: 130,
+    attacks: [
+      { name: 'Frozen Slam', damage: 50, cost: 2 },
+      { name: 'Permafrost Crush', damage: 80, cost: 3, effect: 'Freeze target for 1 turn' }
+    ],
+    description: 'Born from ancient glaciers, slow but devastating.',
+    artwork: '/cards/glacier_giant.png'
+  },
+  {
+    id: 'blizzard_phoenix',
+    name: 'Frostfire Phoenix',
+    type: 'creature',
+    element: 'ice',
+    rarity: 'epic',
+    cost: 6,
+    hp: 100,
+    attacks: [
+      { name: 'Glacial Wings', damage: 45, cost: 2 },
+      { name: 'Absolute Zero', damage: 70, cost: 3, effect: 'Freeze all enemies' }
+    ],
+    description: 'A mythical bird reborn in eternal ice.',
+    artwork: '/cards/blizzard_phoenix.png'
+  },
+  {
+    id: 'ice_queen',
+    name: 'Empress of Winter',
+    type: 'creature',
+    element: 'ice',
+    rarity: 'legendary',
+    cost: 8,
+    hp: 150,
+    attacks: [
+      { name: 'Frozen Heart', damage: 60, cost: 2, effect: 'Freeze target' },
+      { name: 'Eternal Winter', damage: 90, cost: 4, effect: 'Freeze all enemies, +20 to frozen targets' }
+    ],
+    description: 'Ruler of the frozen realm, her gaze alone can freeze souls.',
+    artwork: '/cards/ice_queen.png'
+  },
+  {
+    id: 'flash_freeze',
+    name: 'Flash Freeze',
+    type: 'spell',
+    element: 'ice',
+    rarity: 'uncommon',
+    cost: 3,
+    effect: 'Deal 40 damage and freeze one enemy for 1 turn.',
+    description: 'Instantly encases the target in solid ice.',
+    artwork: '/cards/flash_freeze.png'
   }
 ]
 

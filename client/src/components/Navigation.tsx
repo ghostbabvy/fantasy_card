@@ -13,6 +13,7 @@ export default function Navigation() {
   const navItems = [
     { path: '/', label: 'Home', icon: '🏠', badge: unclaimedMissions > 0 ? unclaimedMissions : null },
     { path: '/collection', label: 'Collection', icon: '📚', badge: null },
+    { path: '/decks', label: 'Decks', icon: '🃏', badge: null },
     { path: '/shop', label: 'Shop', icon: '🛒', badge: canClaimFreePack ? 'FREE' : null },
     { path: '/crafting', label: 'Craft', icon: '🔨', badge: null },
     { path: '/battle', label: 'Battle', icon: '⚔️', badge: null },

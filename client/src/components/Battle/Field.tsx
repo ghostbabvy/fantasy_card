@@ -95,6 +95,7 @@ export default function Field({ cards, isEnemy }: FieldProps) {
                 {card.element === 'lightning' && '⚡'}
                 {card.element === 'shadow' && '🌑'}
                 {card.element === 'light' && '✨'}
+                {card.element === 'ice' && '❄️'}
               </div>
 
               {/* Stats */}
