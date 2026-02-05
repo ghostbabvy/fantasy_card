@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import { cards, getCardById } from '../data/cards'
 import { Deck, Rarity, AchievementTier } from '../types'
 import { achievements as achievementDefinitions } from '../data/achievements'
+import { leaderboardApi, authApi } from '../services/api'
 
 // Card variant types (for chase/collectibility)
 export type CardVariant = 'normal' | 'holo' | 'fullart' | 'secret'
@@ -979,12 +980,22 @@ export const useGameStore = create<GameState>()(
           const currentValue = state.stats[stat]
           // Only increment numeric stats
           if (typeof currentValue === 'number') {
-            return {
-              stats: {
-                ...state.stats,
-                [stat]: currentValue + amount
-              }
+            const newStats = {
+              ...state.stats,
+              [stat]: currentValue + amount
             }
+
+            // Sync to server if logged in
+            if (authApi.isLoggedIn()) {
+              leaderboardApi.syncStats({
+                battlesWon: newStats.battlesWon,
+                battlesPlayed: newStats.battlesPlayed,
+                totalDamageDealt: newStats.damageDealt,
+                cardsCollected: Object.keys(state.collection).length
+              }).catch(() => {}) // Silently fail if sync fails
+            }
+
+            return { stats: newStats }
           }
           return state
         })
