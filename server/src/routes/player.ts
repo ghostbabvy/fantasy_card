@@ -62,21 +62,23 @@ router.post('/:id/decks', (req, res) => {
 
 // Update deck
 router.put('/:playerId/decks/:deckId', (req, res) => {
-  const deckId = parseInt(req.params.deckId)
+  const playerId = parseInt(req.params.playerId)
+  const deckId = req.params.deckId
   const { name, cards } = req.body
 
   if (!name || !cards || !Array.isArray(cards)) {
     return res.status(400).json({ error: 'Invalid deck data' })
   }
 
-  updateDeck(deckId, name, cards)
+  updateDeck(playerId, deckId, name, cards)
   res.json({ success: true })
 })
 
 // Delete deck
 router.delete('/:playerId/decks/:deckId', (req, res) => {
-  const deckId = parseInt(req.params.deckId)
-  deleteDeck(deckId)
+  const playerId = parseInt(req.params.playerId)
+  const deckId = req.params.deckId
+  deleteDeck(playerId, deckId)
   res.json({ success: true })
 })
 

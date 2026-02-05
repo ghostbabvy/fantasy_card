@@ -1,14 +1,28 @@
-export type Element = 'fire' | 'water' | 'nature' | 'earth' | 'lightning' | 'shadow' | 'light' | 'ice'
+export type Element = 'fire' | 'water' | 'nature' | 'earth' | 'lightning' | 'shadow' | 'light' | 'ice' | 'normal'
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
 
 export type CardType = 'creature' | 'spell' | 'equipment'
+
+// Attack targeting types
+export type AttackTarget = 'active' | 'bench' | 'any' | 'all-bench'
 
 export interface Attack {
   name: string
   damage: number
   cost: number  // Energy/mana cost to use this attack
   effect?: string  // Optional special effect description
+  target?: AttackTarget  // Default is 'active' - who can be targeted
+}
+
+// Status effect types for battle
+export type StatusEffectType = 'stun' | 'poison' | 'burn' | 'shield' | 'weaken' | 'energyGain'
+
+export interface StatusEffect {
+  type: StatusEffectType
+  duration: number  // Number of turns remaining
+  value: number     // Damage per turn (poison/burn) or damage blocked (shield) or % reduction (weaken)
+  source?: string   // Attack name that caused it
 }
 
 export interface Card {
@@ -37,6 +51,7 @@ export interface BattleCard extends Card {
   currentAttack: number
   canAttack: boolean
   hasAttackedThisTurn: boolean
+  statusEffects: StatusEffect[]
 }
 
 export interface Player {
@@ -69,7 +84,8 @@ export const elementAdvantages: Record<Element, Element> = {
   lightning: 'water',
   shadow: 'light',
   light: 'shadow',
-  ice: 'nature'  // Ice is strong against nature
+  ice: 'nature',  // Ice is strong against nature
+  normal: 'shadow'  // Normal is weak to shadow, strong against nothing special
 }
 
 // Rarity colors
@@ -90,7 +106,8 @@ export const elementColors: Record<Element, string> = {
   lightning: '#eab308',
   shadow: '#6b21a8',
   light: '#fbbf24',
-  ice: '#67e8f9'  // Cyan/ice blue
+  ice: '#67e8f9',  // Cyan/ice blue
+  normal: '#a8a29e'  // Warm gray/beige
 }
 
 // Dust values
@@ -100,4 +117,47 @@ export const dustValues: Record<Rarity, { disenchant: number; craft: number }> =
   rare: { disenchant: 100, craft: 400 },
   epic: { disenchant: 400, craft: 1600 },
   legendary: { disenchant: 1600, craft: 3200 }
+}
+
+// Sell values (coins)
+export const sellValues: Record<Rarity, number> = {
+  common: 10,
+  uncommon: 25,
+  rare: 75,
+  epic: 200,
+  legendary: 500
+}
+
+// Achievement types
+export type AchievementTier = 'bronze' | 'silver' | 'gold'
+export type AchievementCategory = 'collection' | 'battle' | 'challenge' | 'economy'
+
+export interface AchievementReward {
+  coins?: number
+  dust?: number
+  title?: string
+}
+
+export interface AchievementTierData {
+  target: number
+  reward: AchievementReward
+}
+
+export interface Achievement {
+  id: string
+  title: string
+  description: string
+  category: AchievementCategory
+  tiers: {
+    bronze: AchievementTierData
+    silver: AchievementTierData
+    gold: AchievementTierData
+  }
+}
+
+// Player rank tiers
+export interface RankTier {
+  name: string
+  pointsRequired: number
+  badge: string
 }

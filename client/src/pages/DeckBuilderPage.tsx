@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../stores/gameStore'
 import { cards } from '../data/cards'
 import Card from '../components/Card'
-import { Element, Rarity, Card as CardType, elementColors, rarityColors } from '../types'
+import { Element, Rarity, Card as CardType, elementColors } from '../types'
+import { ElementIcon } from '../components/ElementIcon'
+import DeckAnalysisPanel from '../components/DeckAnalysisPanel'
 
 const DECK_SIZE = 20
 const MAX_COPIES = 2
@@ -20,12 +22,13 @@ interface DeckStats {
 }
 
 export default function DeckBuilderPage() {
-  const { collection, decks, saveDeck, deleteDeck } = useGameStore()
+  const { collection, decks, saveDeck, deleteDeck, favoriteCards } = useGameStore()
 
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null)
   const [deckName, setDeckName] = useState('')
   const [deckCards, setDeckCards] = useState<string[]>([])
   const [elementFilter, setElementFilter] = useState<Element | 'all'>('all')
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [showAutoBuildModal, setShowAutoBuildModal] = useState(false)
   const [autoBuildStrategy, setAutoBuildStrategy] = useState<AutoBuildStrategy>('balanced')
   const [focusElement, setFocusElement] = useState<Element>('fire')
@@ -44,9 +47,10 @@ export default function DeckBuilderPage() {
   const filteredCards = useMemo(() => {
     return ownedCards.filter(card => {
       if (elementFilter !== 'all' && card.element !== elementFilter) return false
+      if (showFavoritesOnly && !favoriteCards.includes(card.id)) return false
       return true
     })
-  }, [ownedCards, elementFilter])
+  }, [ownedCards, elementFilter, showFavoritesOnly, favoriteCards])
 
   // Calculate deck stats
   const deckStats = useMemo((): DeckStats => {
@@ -347,7 +351,7 @@ export default function DeckBuilderPage() {
             onClick={() => setShowAutoBuildModal(true)}
             className="w-full py-3 mb-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl font-bold flex items-center justify-center gap-2"
           >
-            <span>🤖</span> Auto-Build Deck
+            <img src="/icons/auto-deck.png" alt="Auto" className="w-8 h-8" /> Auto-Build Deck
           </motion.button>
 
           {/* Deck Stats */}
@@ -440,6 +444,9 @@ export default function DeckBuilderPage() {
               Clear Deck
             </button>
           )}
+
+          {/* Deck Analysis Panel */}
+          <DeckAnalysisPanel cardIds={deckCards} />
         </div>
 
         {/* Card Collection */}
@@ -454,6 +461,15 @@ export default function DeckBuilderPage() {
             >
               All
             </button>
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1 ${
+                showFavoritesOnly ? 'bg-pink-500 text-white' : 'bg-white/20 text-white'
+              }`}
+            >
+              <span className={showFavoritesOnly ? 'text-white' : 'text-pink-400'}>&#9829;</span>
+              Favorites
+            </button>
             {elements.map(el => (
               <button
                 key={el}
@@ -463,14 +479,7 @@ export default function DeckBuilderPage() {
                 }`}
                 style={elementFilter === el ? {} : { borderColor: elementColors[el], borderWidth: 1 }}
               >
-                {el === 'fire' && '🔥'}
-                {el === 'water' && '💧'}
-                {el === 'nature' && '🌿'}
-                {el === 'earth' && '🪨'}
-                {el === 'lightning' && '⚡'}
-                {el === 'shadow' && '🌑'}
-                {el === 'light' && '✨'}
-                {el === 'ice' && '❄️'}
+                <ElementIcon element={el} size={20} />
               </button>
             ))}
           </div>
@@ -493,6 +502,7 @@ export default function DeckBuilderPage() {
                     card={card}
                     size="sm"
                     onClick={canAdd ? () => addCardToDeck(card.id) : undefined}
+                    isFavorite={favoriteCards.includes(card.id)}
                   />
 
                   {/* Owned Badge */}
@@ -506,6 +516,7 @@ export default function DeckBuilderPage() {
                       {inDeck}x
                     </div>
                   )}
+
 
                   {/* Add indicator */}
                   {canAdd && (
@@ -550,7 +561,7 @@ export default function DeckBuilderPage() {
               onClick={e => e.stopPropagation()}
             >
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                <span>🤖</span> Auto-Build Deck
+                <img src="/icons/auto-deck.png" alt="Auto" className="w-8 h-8" /> Auto-Build Deck
               </h2>
 
               <p className="text-white/70 mb-6">
@@ -601,14 +612,7 @@ export default function DeckBuilderPage() {
                         }`}
                         style={{ backgroundColor: elementColors[el] + '60' }}
                       >
-                        {el === 'fire' && '🔥'}
-                        {el === 'water' && '💧'}
-                        {el === 'nature' && '🌿'}
-                        {el === 'earth' && '🪨'}
-                        {el === 'lightning' && '⚡'}
-                        {el === 'shadow' && '🌑'}
-                        {el === 'light' && '✨'}
-                        {el === 'ice' && '❄️'}
+                        <ElementIcon element={el} size={24} />
                       </button>
                     ))}
                   </div>

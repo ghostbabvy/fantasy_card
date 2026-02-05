@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useGameStore } from '../stores/gameStore'
 import { useBattleStore } from '../stores/battleStore'
-import { cards } from '../data/cards'
+import { cards, getCardById } from '../data/cards'
 import Card from '../components/Card'
 import BattleArena from '../components/Battle/BattleArena'
 import { Rarity, Card as CardType } from '../types'
@@ -14,7 +14,18 @@ const MAX_COPIES = 2
 type View = 'menu' | 'deckBuilder' | 'battle'
 
 export default function BattlePage() {
-  const { collection, decks, saveDeck, deleteDeck } = useGameStore()
+  const { collection, decks: rawDecks, saveDeck, deleteDeck } = useGameStore()
+
+  // Filter to only valid decks with valid card IDs
+  const decks = useMemo(() => {
+    return rawDecks.filter(deck =>
+      deck &&
+      deck.cards &&
+      Array.isArray(deck.cards) &&
+      deck.cards.length > 0 &&
+      deck.cards.every(cardId => getCardById(cardId))
+    )
+  }, [rawDecks])
   const { isInBattle, startBattle } = useBattleStore()
 
   const [view, setView] = useState<View>('menu')
@@ -50,17 +61,22 @@ export default function BattlePage() {
 
   const handleStartBattle = () => {
     if (currentDeck.length === DECK_SIZE) {
+      // Auto-save the deck before starting battle
+      const name = deckName.trim() || `Deck ${Date.now()}`
+      const id = editingDeckId || Date.now().toString()
+      saveDeck(id, name, currentDeck)
       startBattle(currentDeck)
     }
   }
 
   const handleSelectSavedDeck = (deckId: string) => {
     const deck = decks.find(d => d.id === deckId)
-    if (deck) {
-      setCurrentDeck([...deck.cards])
+    if (deck && deck.cards && deck.cards.length > 0) {
+      const deckCards = [...deck.cards] // Make a fresh copy
+      setCurrentDeck(deckCards)
       setDeckName(deck.name)
       setEditingDeckId(deckId)
-      startBattle(deck.cards)
+      startBattle(deckCards)
     }
   }
 
@@ -86,7 +102,7 @@ export default function BattlePage() {
   }
 
   // Auto-build a balanced deck
-  const autoBuildDeck = () => {
+  const autoBuildDeck = (): string[] => {
     const newDeck: string[] = []
 
     // Score cards - prioritize rarity and balanced cost curve
@@ -124,7 +140,6 @@ export default function BattlePage() {
     for (const { card, owned } of scoredCards) {
       if (newDeck.length >= DECK_SIZE) break
 
-      const currentCount = newDeck.filter(id => id === card.id).length
       const maxCopies = Math.min(MAX_COPIES, owned)
 
       while (newDeck.filter(id => id === card.id).length < maxCopies && newDeck.length < DECK_SIZE) {
@@ -134,6 +149,17 @@ export default function BattlePage() {
 
     setCurrentDeck(newDeck)
     setDeckName('Auto-Built Deck')
+    return newDeck
+  }
+
+  // Quick battle with auto-built deck
+  const handleQuickBattle = () => {
+    const deck = autoBuildDeck()
+    if (deck.length === DECK_SIZE) {
+      // Save as Quick Battle deck
+      saveDeck('quick-battle', 'Quick Battle Deck', deck)
+      startBattle(deck)
+    }
   }
 
   // If in battle, show the arena
@@ -203,6 +229,18 @@ export default function BattlePage() {
             </div>
           )}
 
+          {/* Quick Battle Button */}
+          {ownedCards.length >= DECK_SIZE && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleQuickBattle}
+              className="w-full py-4 mb-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg"
+            >
+              <span>⚡</span> Quick Battle (Auto-Build Deck)
+            </motion.button>
+          )}
+
           {/* Build New Deck Button */}
           <div className="flex gap-3">
             <motion.button
@@ -217,10 +255,37 @@ export default function BattlePage() {
               to="/decks"
               className="flex-1 py-3 bg-purple-500/30 hover:bg-purple-500/40 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
             >
-              <span>🤖</span> Auto-Build Deck
+              <img src="/icons/auto-deck.png" alt="Deck" className="w-8 h-8" /> Deck Builder
             </Link>
           </div>
         </div>
+
+        {/* Challenge Mode Section */}
+        <Link to="/challenge">
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            className="bg-gradient-to-br from-yellow-900/50 to-orange-900/50 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-yellow-500/30 cursor-pointer hover:border-yellow-400/50 transition-colors"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-5xl">🏆</span>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold">Jump Up Challenge</h2>
+                <p className="text-white/80">50 progressive levels with boss fights every 10 levels!</p>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-white/60">Exclusive Rewards</div>
+                <div className="text-yellow-400 font-bold">5 Boss Cards</div>
+              </div>
+              <motion.div
+                animate={{ x: [0, 5, 0] }}
+                transition={{ repeat: Infinity, duration: 1 }}
+                className="text-3xl"
+              >
+                →
+              </motion.div>
+            </div>
+          </motion.div>
+        </Link>
 
         {/* No cards warning */}
         {ownedCards.length < DECK_SIZE && (
@@ -298,7 +363,7 @@ export default function BattlePage() {
           onClick={autoBuildDeck}
           className="w-full py-2 mb-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg font-bold flex items-center justify-center gap-2"
         >
-          <span>🤖</span> Auto-Build
+          <img src="/icons/auto-deck.png" alt="Auto" className="w-8 h-8" /> Auto-Build
         </motion.button>
 
         {/* Deck cards list */}

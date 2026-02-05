@@ -3,16 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../stores/gameStore'
 import { cards } from '../data/cards'
 import Card from '../components/Card'
-import { Element, Rarity, Card as CardType, dustValues, rarityColors } from '../types'
+import { Element, Rarity, Card as CardType, dustValues, rarityColors, sellValues } from '../types'
 
 export default function CraftingPage() {
-  const { collection, dust, craftCard, disenchantCard } = useGameStore()
+  const { collection, dust, coins, craftCard, disenchantCard, sellCard } = useGameStore()
   const [elementFilter, setElementFilter] = useState<Element | 'all'>('all')
   const [rarityFilter, setRarityFilter] = useState<Rarity | 'all'>('all')
   const [showOwned, setShowOwned] = useState<'all' | 'owned' | 'missing'>('all')
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [craftAnimation, setCraftAnimation] = useState(false)
   const [disenchantAnimation, setDisenchantAnimation] = useState(false)
+  const [sellAnimation, setSellAnimation] = useState(false)
 
   const elements: Element[] = ['fire', 'water', 'nature', 'earth', 'lightning', 'shadow', 'light', 'ice']
   const rarities: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
@@ -58,16 +59,35 @@ export default function CraftingPage() {
     }, 1000)
   }
 
+  const handleSell = () => {
+    if (!selectedCard) return
+    const owned = collection[selectedCard.id]
+    if (!owned || owned.quantity < 1) return
+
+    setSellAnimation(true)
+    setTimeout(() => {
+      sellCard(selectedCard.id)
+      setSellAnimation(false)
+      // Close if no more cards
+      const newQuantity = (owned.quantity || 0) - 1
+      if (newQuantity <= 0) {
+        setSelectedCard(null)
+      }
+    }, 1000)
+  }
+
   const getSelectedCardInfo = () => {
     if (!selectedCard) return null
     const owned = collection[selectedCard.id]
     const quantity = owned?.quantity || 0
     const craftCost = dustValues[selectedCard.rarity].craft
     const disenchantValue = dustValues[selectedCard.rarity].disenchant
+    const sellValue = sellValues[selectedCard.rarity]
     const canCraft = dust >= craftCost
     const canDisenchant = quantity > 0
+    const canSell = quantity > 0
 
-    return { quantity, craftCost, disenchantValue, canCraft, canDisenchant }
+    return { quantity, craftCost, disenchantValue, sellValue, canCraft, canDisenchant, canSell }
   }
 
   const info = getSelectedCardInfo()
@@ -76,10 +96,17 @@ export default function CraftingPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Crafting</h1>
-        <div className="flex items-center gap-2 bg-purple-500/20 px-4 py-2 rounded-lg">
-          <span className="text-purple-300">✨</span>
-          <span className="font-bold text-xl">{dust.toLocaleString()}</span>
-          <span className="text-white/60">Dust</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-yellow-500/20 px-4 py-2 rounded-lg">
+            <span className="text-yellow-300">🪙</span>
+            <span className="font-bold text-xl">{coins.toLocaleString()}</span>
+            <span className="text-white/60">Coins</span>
+          </div>
+          <div className="flex items-center gap-2 bg-purple-500/20 px-4 py-2 rounded-lg">
+            <span className="text-purple-300">✨</span>
+            <span className="font-bold text-xl">{dust.toLocaleString()}</span>
+            <span className="text-white/60">Dust</span>
+          </div>
         </div>
       </div>
 
@@ -242,14 +269,42 @@ export default function CraftingPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-4">
-                {/* Disenchant */}
+              <div className="flex items-center gap-3">
+                {/* Sell for Coins */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  disabled={!info.canSell || sellAnimation}
+                  onClick={handleSell}
+                  className={`px-5 py-3 rounded-xl font-bold flex items-center gap-2 ${
+                    info.canSell
+                      ? 'bg-yellow-500 hover:bg-yellow-600'
+                      : 'bg-gray-600 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  {sellAnimation ? (
+                    <motion.span
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 0.5 }}
+                    >
+                      🪙
+                    </motion.span>
+                  ) : (
+                    <>
+                      <span>🪙</span>
+                      Sell
+                      <span className="text-yellow-200">+{info.sellValue}</span>
+                    </>
+                  )}
+                </motion.button>
+
+                {/* Disenchant for Dust */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   disabled={!info.canDisenchant || disenchantAnimation}
                   onClick={handleDisenchant}
-                  className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 ${
+                  className={`px-5 py-3 rounded-xl font-bold flex items-center gap-2 ${
                     info.canDisenchant
                       ? 'bg-red-500 hover:bg-red-600'
                       : 'bg-gray-600 cursor-not-allowed opacity-50'
@@ -265,7 +320,7 @@ export default function CraftingPage() {
                   ) : (
                     <>
                       <span>🔥</span>
-                      Disenchant
+                      Dust
                       <span className="text-green-300">+{info.disenchantValue}</span>
                     </>
                   )}
@@ -277,7 +332,7 @@ export default function CraftingPage() {
                   whileTap={{ scale: 0.95 }}
                   disabled={!info.canCraft || craftAnimation}
                   onClick={handleCraft}
-                  className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 ${
+                  className={`px-5 py-3 rounded-xl font-bold flex items-center gap-2 ${
                     info.canCraft
                       ? 'bg-purple-500 hover:bg-purple-600'
                       : 'bg-gray-600 cursor-not-allowed opacity-50'

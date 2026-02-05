@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { Card as CardType, rarityColors, elementColors } from '../types'
+import { ElementIcon } from './ElementIcon'
 
 interface CardDetailProps {
   card: CardType
@@ -50,19 +51,22 @@ export default function CardDetail({ card, quantity, onClose }: CardDetailProps)
           </div>
         </div>
 
-        {/* Card Art Placeholder */}
+        {/* Card Art */}
         <div
-          className="h-32 rounded-xl mb-4 flex items-center justify-center text-6xl"
+          className="h-48 rounded-xl mb-4 overflow-hidden relative"
           style={{ background: `linear-gradient(135deg, ${elementColor}40 0%, ${elementColor}20 100%)` }}
         >
-          {card.element === 'fire' && '🔥'}
-          {card.element === 'water' && '💧'}
-          {card.element === 'nature' && '🌿'}
-          {card.element === 'earth' && '🪨'}
-          {card.element === 'lightning' && '⚡'}
-          {card.element === 'shadow' && '🌑'}
-          {card.element === 'light' && '✨'}
-          {card.element === 'ice' && '❄️'}
+          {card.artwork ? (
+            <img
+              src={card.artwork}
+              alt={card.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <ElementIcon element={card.element} size={80} />
+            </div>
+          )}
         </div>
 
         {/* Card Type & HP */}
@@ -79,7 +83,10 @@ export default function CardDetail({ card, quantity, onClose }: CardDetailProps)
         {/* Attacks (for creatures) */}
         {card.type === 'creature' && card.attacks && (
           <div className="space-y-3 mb-4">
-            <h3 className="font-bold text-white/80">Attacks</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white/80">Attacks</h3>
+              <ElementIcon element={card.element} size={20} />
+            </div>
             {card.attacks.map((attack, index) => (
               <div
                 key={index}

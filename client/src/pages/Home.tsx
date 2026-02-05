@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useGameStore } from '../stores/gameStore'
 import { cards } from '../data/cards'
+import { calculateAchievementPoints, getCurrentRank } from '../data/ranks'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -19,11 +20,17 @@ export default function Home() {
     missions,
     freePacksAvailable,
     freePackTimer,
+    achievements,
+    selectedTitle,
     checkDailyLogin,
     claimDailyReward,
     claimMissionReward,
     resetDailyMissions
   } = useGameStore()
+
+  // Calculate rank
+  const achievementPoints = calculateAchievementPoints(achievements)
+  const currentRank = getCurrentRank(achievementPoints)
 
   const [showLoginReward, setShowLoginReward] = useState(false)
   const [claimedReward, setClaimedReward] = useState<{ coins?: number; dust?: number; packs?: string } | null>(null)
@@ -73,9 +80,21 @@ export default function Home() {
         className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 mb-6"
       >
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold">{playerName}</h1>
-            <div className="text-white/80">Level {level}</div>
+          <div className="flex items-center gap-4">
+            {/* Rank Badge */}
+            <div className="bg-white/20 rounded-lg px-3 py-2 text-center">
+              <div className="text-sm text-white/70">Rank</div>
+              <div className="font-bold text-yellow-300">{currentRank.name}</div>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">{playerName}</h1>
+              <div className="flex items-center gap-2">
+                <span className="text-white/80">Level {level}</span>
+                {selectedTitle && (
+                  <span className="text-purple-300 text-sm">"{selectedTitle}"</span>
+                )}
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="bg-white/20 rounded-lg px-4 py-2">

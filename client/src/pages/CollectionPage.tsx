@@ -5,13 +5,15 @@ import { cards } from '../data/cards'
 import Card from '../components/Card'
 import CardDetail from '../components/CardDetail'
 import { Element, Rarity, Card as CardType, elementColors } from '../types'
+import { ElementIcon } from '../components/ElementIcon'
 
 export default function CollectionPage() {
-  const { collection, markCardSeen } = useGameStore()
+  const { collection, markCardSeen, favoriteCards, toggleFavorite, stats } = useGameStore()
   const [elementFilter, setElementFilter] = useState<Element | 'all'>('all')
   const [rarityFilter, setRarityFilter] = useState<Rarity | 'all'>('all')
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [showOwned, setShowOwned] = useState(true)
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
 
   const elements: Element[] = ['fire', 'water', 'nature', 'earth', 'lightning', 'shadow', 'light', 'ice']
   const rarities: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
@@ -22,6 +24,7 @@ export default function CollectionPage() {
     const isOwned = owned && owned.quantity > 0
 
     if (showOwned && !isOwned) return false
+    if (showFavoritesOnly && !favoriteCards.includes(card.id)) return false
     if (elementFilter !== 'all' && card.element !== elementFilter) return false
     if (rarityFilter !== 'all' && card.rarity !== rarityFilter) return false
     return true
@@ -60,22 +63,14 @@ export default function CollectionPage() {
       {/* Element Progress Bars */}
       <div className="bg-white/5 rounded-xl p-4 mb-6">
         <h2 className="font-bold mb-3 text-sm text-white/70">Collection Progress by Element</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-8 gap-3">
           {elementStats.map(stat => (
             <div key={stat.element} className="text-center">
               <div
-                className="text-2xl mb-1"
+                className="flex justify-center items-center h-10 mb-1 cursor-pointer"
                 onClick={() => setElementFilter(stat.element === elementFilter ? 'all' : stat.element)}
-                style={{ cursor: 'pointer' }}
               >
-                {stat.element === 'fire' && '🔥'}
-                {stat.element === 'water' && '💧'}
-                {stat.element === 'nature' && '🌿'}
-                {stat.element === 'earth' && '🪨'}
-                {stat.element === 'lightning' && '⚡'}
-                {stat.element === 'shadow' && '🌑'}
-                {stat.element === 'light' && '✨'}
-                {stat.element === 'ice' && '❄️'}
+                <ElementIcon element={stat.element} size={32} />
               </div>
               <div className="bg-black/40 rounded-full h-2 overflow-hidden mb-1">
                 <motion.div
@@ -115,6 +110,17 @@ export default function CollectionPage() {
             All Cards
           </button>
         </div>
+
+        {/* Favorites Filter */}
+        <button
+          onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1 ${
+            showFavoritesOnly ? 'bg-pink-500 text-white' : 'bg-white/20 text-white'
+          }`}
+        >
+          <span className={showFavoritesOnly ? 'text-white' : 'text-pink-400'}>&#9829;</span>
+          Favorites {favoriteCards.length > 0 && `(${favoriteCards.length})`}
+        </button>
 
         <div className="h-6 w-px bg-white/20" />
 
@@ -176,6 +182,9 @@ export default function CollectionPage() {
                 <Card
                   card={card}
                   onClick={() => handleCardClick(card)}
+                  isFavorite={favoriteCards.includes(card.id)}
+                  onFavoriteToggle={quantity > 0 ? () => toggleFavorite(card.id) : undefined}
+                  masteryXp={stats.cardUsageCount[card.id] || 0}
                 />
 
                 {/* Quantity Badge */}
@@ -195,6 +204,7 @@ export default function CollectionPage() {
                     NEW!
                   </motion.div>
                 )}
+
 
                 {/* Variant Indicators */}
                 {owned && (owned.variants.holo > 0 || owned.variants.fullart > 0 || owned.variants.secret > 0) && (

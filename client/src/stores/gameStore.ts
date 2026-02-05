@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { cards, getCardById } from '../data/cards'
-import { Deck, Rarity } from '../types'
+import { Deck, Rarity, AchievementTier } from '../types'
+import { achievements as achievementDefinitions } from '../data/achievements'
 
 // Card variant types (for chase/collectibility)
 export type CardVariant = 'normal' | 'holo' | 'fullart' | 'secret'
@@ -33,6 +34,8 @@ export interface DailyLoginReward {
 interface GameState {
   // Player info
   playerName: string
+  playerBio: string
+  profilePicture: string  // Base64 data URL
   level: number
   xp: number
 
@@ -71,10 +74,40 @@ interface GameState {
     damageDealt: number
     packsOpened: number
     creaturesDefeated: number
+    cardUsageCount: Record<string, number>  // cardId -> times used in battle
+    winStreak: number
+    bestWinStreak: number
+    totalCoinsSpent: number
   }
+
+  // Favorites
+  favoriteCards: string[]
+
+  // Achievements
+  achievements: { id: string; claimedTiers: AchievementTier[] }[]
+  unlockedTitles: string[]
+  selectedTitle: string | null
+
+  // Challenge mode progress
+  challengeProgress: {
+    highestLevel: number           // Highest level beaten
+    completedLevels: number[]      // Array of completed level numbers
+    bossCardsOwned: string[]       // IDs of boss exclusive cards earned
+    levelStars: Record<number, number>  // Stars earned per level (1-3)
+  }
+
+  // Card Backs
+  unlockedCardBacks: string[]
+  selectedCardBack: string
+
+  // Battle Arenas
+  unlockedArenas: string[]
+  selectedArena: string
 
   // Actions
   setPlayerName: (name: string) => void
+  setPlayerBio: (bio: string) => void
+  setProfilePicture: (picture: string) => void
   addXp: (amount: number) => void
   addCoins: (amount: number) => void
   spendCoins: (amount: number) => boolean
@@ -88,6 +121,7 @@ interface GameState {
   deleteDeck: (id: string) => void
   craftCard: (cardId: string) => boolean
   disenchantCard: (cardId: string) => number
+  sellCard: (cardId: string) => number
   markCardSeen: (cardId: string) => void
 
   // Daily login
@@ -101,6 +135,40 @@ interface GameState {
 
   // Stats
   incrementStat: (stat: keyof GameState['stats'], amount?: number) => void
+
+  // Challenge mode
+  completeChallengeLevel: (level: number, isReplay: boolean, rewards: {
+    coins: number
+    dust: number
+    xp: number
+    pack?: string
+    exclusiveCard?: string
+  }, stars: number) => void
+  hasBossCard: (cardId: string) => boolean
+
+  // Favorites
+  toggleFavorite: (cardId: string) => void
+  isFavorite: (cardId: string) => boolean
+
+  // Achievements
+  checkAchievements: () => void
+  claimAchievementReward: (achievementId: string, tier: AchievementTier) => boolean
+  getAchievementProgress: (achievementId: string) => number
+  setSelectedTitle: (title: string | null) => void
+
+  // Track card usage
+  trackCardUsage: (cardId: string) => void
+  recordBattleResult: (won: boolean) => void
+
+  // Card Backs
+  purchaseCardBack: (cardBackId: string) => boolean
+  setSelectedCardBack: (cardBackId: string) => void
+  hasCardBack: (cardBackId: string) => boolean
+
+  // Battle Arenas
+  purchaseArena: (arenaId: string) => boolean
+  setSelectedArena: (arenaId: string) => void
+  hasArena: (arenaId: string) => boolean
 }
 
 // Drop rates by rarity
@@ -135,6 +203,15 @@ export const variantMultipliers: Record<CardVariant, number> = {
   holo: 2,
   fullart: 4,
   secret: 8
+}
+
+// Sell values (coins)
+const sellValues: Record<Rarity, number> = {
+  common: 10,
+  uncommon: 25,
+  rare: 75,
+  epic: 200,
+  legendary: 500
 }
 
 // Pack configurations
@@ -314,25 +391,15 @@ function getTodayDateString(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-// Force reset on version 3 - clear all old data
-const CURRENT_VERSION = 3
-const storedData = localStorage.getItem('fantasy-cards-game')
-if (storedData) {
-  try {
-    const parsed = JSON.parse(storedData)
-    if (!parsed.version || parsed.version < CURRENT_VERSION) {
-      console.log('Resetting game data to new version...')
-      localStorage.removeItem('fantasy-cards-game')
-    }
-  } catch {
-    localStorage.removeItem('fantasy-cards-game')
-  }
-}
+// Version for Zustand persist migrations
+const CURRENT_VERSION = 5
 
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
       playerName: 'Hero',
+      playerBio: '',
+      profilePicture: '',
       level: 1,
       xp: 0,
       coins: 500,
@@ -354,10 +421,34 @@ export const useGameStore = create<GameState>()(
         cardsPlayed: 0,
         damageDealt: 0,
         packsOpened: 0,
-        creaturesDefeated: 0
+        creaturesDefeated: 0,
+        cardUsageCount: {},
+        winStreak: 0,
+        bestWinStreak: 0,
+        totalCoinsSpent: 0
+      },
+      favoriteCards: [],
+      achievements: [],
+      unlockedTitles: [],
+      selectedTitle: null,
+      challengeProgress: {
+        highestLevel: 0,
+        completedLevels: [],
+        bossCardsOwned: [],
+        levelStars: {}
       },
 
+      // Card Backs
+      unlockedCardBacks: ['default'],
+      selectedCardBack: 'default',
+
+      // Battle Arenas
+      unlockedArenas: ['default'],
+      selectedArena: 'default',
+
       setPlayerName: (name) => set({ playerName: name }),
+      setPlayerBio: (bio) => set({ playerBio: bio }),
+      setProfilePicture: (picture) => set({ profilePicture: picture }),
 
       addXp: (amount) => {
         const state = get()
@@ -380,7 +471,13 @@ export const useGameStore = create<GameState>()(
       spendCoins: (amount) => {
         const state = get()
         if (state.coins < amount) return false
-        set({ coins: state.coins - amount })
+        set({
+          coins: state.coins - amount,
+          stats: {
+            ...state.stats,
+            totalCoinsSpent: state.stats.totalCoinsSpent + amount
+          }
+        })
         return true
       },
 
@@ -620,9 +717,11 @@ export const useGameStore = create<GameState>()(
       },
 
       saveDeck: (id, name, cardIds) => {
+        if (!cardIds || cardIds.length === 0) return
+
         set(state => {
           const existingIndex = state.decks.findIndex(d => d.id === id)
-          const newDeck: Deck = { id, name, cards: cardIds }
+          const newDeck: Deck = { id, name, cards: [...cardIds] }
 
           if (existingIndex >= 0) {
             const newDecks = [...state.decks]
@@ -703,6 +802,40 @@ export const useGameStore = create<GameState>()(
         })
 
         return dustGain
+      },
+
+      sellCard: (cardId) => {
+        const state = get()
+        const card = getCardById(cardId)
+        if (!card) return 0
+
+        const current = state.collection[cardId]
+        if (!current || current.quantity < 1) return 0
+
+        const coinGain = sellValues[card.rarity]
+
+        // Remove from the most common variant first
+        const variants = { ...current.variants }
+        for (const v of ['normal', 'holo', 'fullart', 'secret'] as CardVariant[]) {
+          if (variants[v] > 0) {
+            variants[v]--
+            break
+          }
+        }
+
+        set({
+          collection: {
+            ...state.collection,
+            [cardId]: {
+              ...current,
+              quantity: current.quantity - 1,
+              variants
+            }
+          },
+          coins: state.coins + coinGain
+        })
+
+        return coinGain
       },
 
       checkDailyLogin: () => {
@@ -842,60 +975,391 @@ export const useGameStore = create<GameState>()(
       },
 
       incrementStat: (stat, amount = 1) => {
-        set(state => ({
+        set(state => {
+          const currentValue = state.stats[stat]
+          // Only increment numeric stats
+          if (typeof currentValue === 'number') {
+            return {
+              stats: {
+                ...state.stats,
+                [stat]: currentValue + amount
+              }
+            }
+          }
+          return state
+        })
+      },
+
+      completeChallengeLevel: (level, isReplay, rewards, stars) => {
+        const state = get()
+
+        // Add rewards
+        let newCoins = state.coins + rewards.coins
+        let newDust = state.dust + rewards.dust
+
+        // Add XP
+        let newXp = state.xp + rewards.xp
+        let newLevel = state.level
+        const xpNeeded = newLevel * 100
+        while (newXp >= xpNeeded) {
+          newXp -= xpNeeded
+          newLevel++
+          newCoins += 100 // Level up reward
+        }
+
+        // Update challenge progress
+        const newProgress = { ...state.challengeProgress }
+        if (!isReplay) {
+          if (!newProgress.completedLevels.includes(level)) {
+            newProgress.completedLevels = [...newProgress.completedLevels, level]
+          }
+          if (level > newProgress.highestLevel) {
+            newProgress.highestLevel = level
+          }
+          // Add exclusive card if earned
+          if (rewards.exclusiveCard && !newProgress.bossCardsOwned.includes(rewards.exclusiveCard)) {
+            newProgress.bossCardsOwned = [...newProgress.bossCardsOwned, rewards.exclusiveCard]
+          }
+        }
+
+        // Update stars (keep highest)
+        const currentStars = newProgress.levelStars[level] || 0
+        if (stars > currentStars) {
+          newProgress.levelStars = { ...newProgress.levelStars, [level]: stars }
+        }
+
+        set({
+          coins: newCoins,
+          dust: newDust,
+          xp: newXp,
+          level: newLevel,
+          challengeProgress: newProgress
+        })
+      },
+
+      hasBossCard: (cardId) => {
+        return get().challengeProgress.bossCardsOwned.includes(cardId)
+      },
+
+      // Favorites
+      toggleFavorite: (cardId) => {
+        const state = get()
+        const isFav = state.favoriteCards.includes(cardId)
+        if (isFav) {
+          set({ favoriteCards: state.favoriteCards.filter(id => id !== cardId) })
+        } else {
+          set({ favoriteCards: [...state.favoriteCards, cardId] })
+        }
+      },
+
+      isFavorite: (cardId) => {
+        return get().favoriteCards.includes(cardId)
+      },
+
+      // Track card usage in battle
+      trackCardUsage: (cardId) => {
+        const state = get()
+        const currentCount = state.stats.cardUsageCount[cardId] || 0
+        set({
           stats: {
             ...state.stats,
-            [stat]: state.stats[stat] + amount
+            cardUsageCount: {
+              ...state.stats.cardUsageCount,
+              [cardId]: currentCount + 1
+            }
           }
-        }))
+        })
+      },
+
+      // Record battle result for win streak tracking
+      recordBattleResult: (won) => {
+        const state = get()
+        if (won) {
+          const newStreak = state.stats.winStreak + 1
+          const newBestStreak = Math.max(newStreak, state.stats.bestWinStreak)
+          set({
+            stats: {
+              ...state.stats,
+              winStreak: newStreak,
+              bestWinStreak: newBestStreak
+            }
+          })
+        } else {
+          set({
+            stats: {
+              ...state.stats,
+              winStreak: 0
+            }
+          })
+        }
+      },
+
+      // Achievement progress calculation
+      getAchievementProgress: (achievementId) => {
+        const state = get()
+        switch (achievementId) {
+          case 'card_collector':
+            return Object.values(state.collection).filter(c => c && c.quantity > 0).length
+          case 'battle_champion':
+            return state.stats.battlesWon
+          case 'challenge_master':
+            return state.challengeProgress.highestLevel
+          case 'big_spender':
+            return state.stats.totalCoinsSpent
+          case 'pack_opener':
+            return state.stats.packsOpened
+          case 'damage_dealer':
+            return state.stats.damageDealt
+          case 'creature_slayer':
+            return state.stats.creaturesDefeated
+          case 'streak_master':
+            return state.stats.bestWinStreak
+          default:
+            return 0
+        }
+      },
+
+      // Check and update achievements
+      checkAchievements: () => {
+        // Achievement checking happens automatically when progress is made
+        // This function can be called to force a re-check if needed
+      },
+
+      // Claim achievement reward
+      claimAchievementReward: (achievementId, tier) => {
+        const state = get()
+
+        // Find achievement
+        const existingEntry = state.achievements.find(a => a.id === achievementId)
+        if (existingEntry?.claimedTiers.includes(tier)) {
+          return false // Already claimed
+        }
+
+        const achievement = achievementDefinitions.find(a => a.id === achievementId)
+        if (!achievement) return false
+
+        const tierData = achievement.tiers[tier]
+        if (!tierData) return false
+
+        // Check if progress meets requirement
+        const progress = state.getAchievementProgress(achievementId)
+        if (progress < tierData.target) return false
+
+        // Apply rewards
+        let newCoins = state.coins
+        let newDust = state.dust
+        let newTitles = [...state.unlockedTitles]
+
+        if (tierData.reward.coins) newCoins += tierData.reward.coins
+        if (tierData.reward.dust) newDust += tierData.reward.dust
+        if (tierData.reward.title && !newTitles.includes(tierData.reward.title)) {
+          newTitles.push(tierData.reward.title)
+        }
+
+        // Update claimed achievements
+        const newAchievements = existingEntry
+          ? state.achievements.map(a =>
+              a.id === achievementId
+                ? { ...a, claimedTiers: [...a.claimedTiers, tier] }
+                : a
+            )
+          : [...state.achievements, { id: achievementId, claimedTiers: [tier] }]
+
+        set({
+          coins: newCoins,
+          dust: newDust,
+          unlockedTitles: newTitles,
+          achievements: newAchievements
+        })
+
+        return true
+      },
+
+      setSelectedTitle: (title) => {
+        set({ selectedTitle: title })
+      },
+
+      // Card Backs
+      purchaseCardBack: (cardBackId) => {
+        const state = get()
+
+        // Check if already owned
+        if (state.unlockedCardBacks.includes(cardBackId)) {
+          return false
+        }
+
+        // Import card backs data dynamically to avoid circular deps
+        // For now, we'll define the costs inline
+        const cardBackCosts: Record<string, { coins?: number; dust?: number }> = {
+          'flame': { coins: 500 },
+          'frost': { coins: 500 },
+          'nature': { coins: 500 },
+          'shadow': { coins: 500 },
+          'legendary': { dust: 500 }
+        }
+
+        const cost = cardBackCosts[cardBackId]
+        if (!cost) return false
+
+        // Check if can afford
+        if (cost.coins && state.coins < cost.coins) return false
+        if (cost.dust && state.dust < cost.dust) return false
+
+        // Deduct cost and add card back
+        set({
+          coins: cost.coins ? state.coins - cost.coins : state.coins,
+          dust: cost.dust ? state.dust - cost.dust : state.dust,
+          unlockedCardBacks: [...state.unlockedCardBacks, cardBackId]
+        })
+
+        return true
+      },
+
+      setSelectedCardBack: (cardBackId) => {
+        const state = get()
+        if (state.unlockedCardBacks.includes(cardBackId)) {
+          set({ selectedCardBack: cardBackId })
+        }
+      },
+
+      hasCardBack: (cardBackId) => {
+        return get().unlockedCardBacks.includes(cardBackId)
+      },
+
+      // Battle Arenas
+      purchaseArena: (arenaId) => {
+        const state = get()
+
+        // Check if already owned
+        if (state.unlockedArenas.includes(arenaId)) {
+          return false
+        }
+
+        // Arena costs
+        const arenaCosts: Record<string, { coins?: number; dust?: number }> = {
+          'fire': { coins: 1000 },
+          'ice': { coins: 1000 },
+          'forest': { coins: 1000 },
+          'shadow': { coins: 1500 },
+          'celestial': { dust: 300 },
+          'storm': { coins: 1500 }
+        }
+
+        const cost = arenaCosts[arenaId]
+        if (!cost) return false
+
+        // Check if can afford
+        if (cost.coins && state.coins < cost.coins) return false
+        if (cost.dust && state.dust < cost.dust) return false
+
+        // Deduct cost and add arena
+        set({
+          coins: cost.coins ? state.coins - cost.coins : state.coins,
+          dust: cost.dust ? state.dust - cost.dust : state.dust,
+          unlockedArenas: [...state.unlockedArenas, arenaId]
+        })
+
+        return true
+      },
+
+      setSelectedArena: (arenaId) => {
+        const state = get()
+        if (state.unlockedArenas.includes(arenaId)) {
+          set({ selectedArena: arenaId })
+        }
+      },
+
+      hasArena: (arenaId) => {
+        return get().unlockedArenas.includes(arenaId)
       }
     }),
     {
       name: 'fantasy-cards-game',
       version: CURRENT_VERSION,
       migrate: (persistedState: any, version: number) => {
-        if (version === 0 || version === 1) {
-          // Migration from old collection format (number) to new format (OwnedCard)
-          const oldCollection = persistedState.collection || {}
+        // Handle all migrations - add missing fields with sensible defaults
+        let state = { ...persistedState }
+
+        // Migrate collection format if needed (versions 0-1)
+        if (version <= 1) {
+          const oldCollection = state.collection || {}
           const newCollection: Record<string, OwnedCard> = {}
 
           for (const [cardId, value] of Object.entries(oldCollection)) {
             if (typeof value === 'number') {
-              // Old format: convert number to OwnedCard
               newCollection[cardId] = {
                 quantity: value,
                 variants: { normal: value, holo: 0, fullart: 0, secret: 0 },
                 isNew: false
               }
             } else if (value && typeof value === 'object' && 'quantity' in value) {
-              // Already new format
               newCollection[cardId] = value as OwnedCard
             }
           }
 
-          return {
-            ...persistedState,
-            collection: Object.keys(newCollection).length > 0 ? newCollection : getStarterCollection(),
-            // Add missing fields with defaults
-            freePackTimer: persistedState.freePackTimer || Date.now(),
-            freePacksAvailable: persistedState.freePacksAvailable ?? 2,
-            lastLoginDate: persistedState.lastLoginDate || '',
-            loginStreak: persistedState.loginStreak || 0,
-            dailyRewards: persistedState.dailyRewards || generateDailyRewards(),
-            hasClaimedTodayLogin: persistedState.hasClaimedTodayLogin || false,
-            missions: persistedState.missions || [...generateDailyMissions(), ...generateWeeklyMissions()],
-            lastMissionReset: persistedState.lastMissionReset || getTodayDateString(),
-            stats: persistedState.stats || {
-              battlesWon: 0,
-              battlesPlayed: 0,
-              cardsPlayed: 0,
-              damageDealt: 0,
-              packsOpened: 0,
-              creaturesDefeated: 0
-            }
+          state.collection = Object.keys(newCollection).length > 0 ? newCollection : getStarterCollection()
+        }
+
+        // Ensure all fields exist with defaults
+        state = {
+          ...state,
+          decks: Array.isArray(state.decks) ? state.decks : [],
+          freePackTimer: state.freePackTimer || Date.now(),
+          freePacksAvailable: state.freePacksAvailable ?? 2,
+          lastLoginDate: state.lastLoginDate || '',
+          loginStreak: state.loginStreak || 0,
+          dailyRewards: state.dailyRewards || generateDailyRewards(),
+          hasClaimedTodayLogin: state.hasClaimedTodayLogin || false,
+          missions: state.missions || [...generateDailyMissions(), ...generateWeeklyMissions()],
+          lastMissionReset: state.lastMissionReset || getTodayDateString(),
+          stats: {
+            battlesWon: state.stats?.battlesWon || 0,
+            battlesPlayed: state.stats?.battlesPlayed || 0,
+            cardsPlayed: state.stats?.cardsPlayed || 0,
+            damageDealt: state.stats?.damageDealt || 0,
+            packsOpened: state.stats?.packsOpened || 0,
+            creaturesDefeated: state.stats?.creaturesDefeated || 0,
+            cardUsageCount: state.stats?.cardUsageCount || {},
+            winStreak: state.stats?.winStreak || 0,
+            bestWinStreak: state.stats?.bestWinStreak || 0,
+            totalCoinsSpent: state.stats?.totalCoinsSpent || 0
+          },
+          favoriteCards: state.favoriteCards || [],
+          achievements: state.achievements || [],
+          unlockedTitles: state.unlockedTitles || [],
+          selectedTitle: state.selectedTitle || null,
+          challengeProgress: state.challengeProgress || {
+            highestLevel: 0,
+            completedLevels: [],
+            bossCardsOwned: [],
+            levelStars: {}
+          },
+          // New in version 5: card backs, arenas, profile
+          unlockedCardBacks: state.unlockedCardBacks || ['default'],
+          selectedCardBack: state.selectedCardBack || 'default',
+          unlockedArenas: state.unlockedArenas || ['default'],
+          selectedArena: state.selectedArena || 'default',
+          playerBio: state.playerBio || '',
+          profilePicture: state.profilePicture || ''
+        }
+
+        return state
+      },
+      onRehydrateStorage: () => (state) => {
+        // Validate decks after rehydration - ensure cards arrays are valid
+        if (state && state.decks) {
+          const validDecks = state.decks.filter(deck =>
+            deck &&
+            deck.cards &&
+            Array.isArray(deck.cards) &&
+            deck.cards.length > 0 &&
+            deck.cards.every(cardId => typeof cardId === 'string' && getCardById(cardId))
+          )
+          if (validDecks.length !== state.decks.length) {
+            console.log('Fixed invalid decks during rehydration')
+            state.decks = validDecks
           }
         }
-        return persistedState
       }
     }
   )

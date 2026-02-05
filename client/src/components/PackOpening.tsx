@@ -10,6 +10,7 @@ interface PackOpeningProps {
     name: string
     color: string
     icon: string
+    image?: string
   }
   cards: Array<{ cardId: string; variant: CardVariant; isNew: boolean }>
   onClose: () => void
@@ -82,61 +83,90 @@ export default function PackOpening({ packType, cards, onClose }: PackOpeningPro
             exit={{ scale: 2, opacity: 0, rotate: 180 }}
             transition={{ type: 'spring', duration: 0.8 }}
             onClick={handlePackClick}
-            className={`
-              w-72 h-96 rounded-2xl cursor-pointer
-              bg-gradient-to-br ${packType.color}
-              flex flex-col items-center justify-center
-              hover:scale-105 transition-transform
-              shadow-2xl relative overflow-hidden
-            `}
+            className="cursor-pointer hover:scale-105 transition-transform relative"
           >
-            {/* Animated glow */}
-            <motion.div
-              className="absolute inset-0 bg-white/20"
-              animate={{ opacity: [0, 0.3, 0] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-            />
+            {/* Pack Image or Fallback */}
+            {packType.image ? (
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+                className="relative"
+              >
+                <img
+                  src={packType.image}
+                  alt={packType.name}
+                  className="w-72 h-auto rounded-2xl shadow-2xl"
+                />
 
-            <motion.div
-              animate={{ y: [0, -15, 0], rotate: [0, 5, -5, 0] }}
-              transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
-              className="text-8xl mb-6"
-            >
-              {packType.icon}
-            </motion.div>
-            <h3 className="text-2xl font-bold mb-2">{packType.name}</h3>
+                {/* Animated glow overlay */}
+                <motion.div
+                  className="absolute inset-0 bg-white/20 rounded-2xl"
+                  animate={{ opacity: [0, 0.3, 0] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                />
+
+                {/* Sparkle effects */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+                  {[...Array(20)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute w-2 h-2 bg-white rounded-full"
+                      style={{
+                        left: `${Math.random() * 100}%`,
+                        top: `${Math.random() * 100}%`
+                      }}
+                      animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0, 1.5, 0]
+                      }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 2 + Math.random(),
+                        delay: Math.random() * 2
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Shine sweep effect */}
+                <motion.div
+                  className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none"
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12"
+                    animate={{ x: ['-200%', '200%'] }}
+                    transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut', repeatDelay: 1 }}
+                  />
+                </motion.div>
+              </motion.div>
+            ) : (
+              <div
+                className={`
+                  w-72 h-96 rounded-2xl
+                  bg-gradient-to-br ${packType.color}
+                  flex flex-col items-center justify-center
+                  shadow-2xl relative overflow-hidden
+                `}
+              >
+                <motion.div
+                  animate={{ y: [0, -15, 0], rotate: [0, 5, -5, 0] }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+                  className="text-8xl mb-6"
+                >
+                  {packType.icon}
+                </motion.div>
+                <h3 className="text-2xl font-bold mb-2">{packType.name}</h3>
+              </div>
+            )}
+
+            {/* Tap to open text */}
             <motion.p
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 1.5 }}
-              className="text-white/80"
+              className="text-white/80 text-center mt-4 text-lg font-bold"
             >
               Tap to open!
             </motion.p>
-
-            {/* Sparkle effects */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
-              {[...Array(15)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-2 h-2 bg-white rounded-full"
-                  initial={{
-                    x: Math.random() * 288,
-                    y: Math.random() * 384,
-                    opacity: 0,
-                    scale: 0
-                  }}
-                  animate={{
-                    opacity: [0, 1, 0],
-                    scale: [0, 1.5, 0]
-                  }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 2 + Math.random(),
-                    delay: Math.random() * 2
-                  }}
-                />
-              ))}
-            </div>
           </motion.div>
         )}
 
@@ -146,20 +176,32 @@ export default function PackOpening({ packType, cards, onClose }: PackOpeningPro
             key="opening"
             className="relative flex items-center justify-center"
           >
-            {/* Center explosion */}
+            {/* Center explosion with pack image */}
             <motion.div
               initial={{ scale: 1, opacity: 1 }}
-              animate={{ scale: [1, 3, 0], opacity: [1, 1, 0] }}
+              animate={{ scale: [1, 1.5, 0], opacity: [1, 1, 0], rotateY: [0, 180, 360] }}
               transition={{ duration: 1.2 }}
-              className="w-64 h-80 rounded-2xl bg-white flex items-center justify-center"
+              className="relative"
             >
-              <motion.span
-                animate={{ rotate: 360, scale: [1, 1.5, 1] }}
+              {packType.image ? (
+                <img
+                  src={packType.image}
+                  alt={packType.name}
+                  className="w-64 h-auto rounded-2xl"
+                />
+              ) : (
+                <div className="w-64 h-80 rounded-2xl bg-white flex items-center justify-center">
+                  <span className="text-8xl">{packType.icon}</span>
+                </div>
+              )}
+
+              {/* Bright flash overlay */}
+              <motion.div
+                className="absolute inset-0 bg-white rounded-2xl"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 1, 1] }}
                 transition={{ duration: 0.8 }}
-                className="text-8xl"
-              >
-                ✨
-              </motion.span>
+              />
             </motion.div>
 
             {/* Burst particles */}
