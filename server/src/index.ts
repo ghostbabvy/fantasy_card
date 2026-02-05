@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { initDatabase } from './db/database.js'
+import { initUsersDb } from './db/users.js'
 import playerRoutes from './routes/player.js'
 import shopRoutes from './routes/shop.js'
 import authRoutes from './routes/auth.js'
@@ -14,8 +15,9 @@ const PORT = process.env.PORT || 3001
 app.use(cors())
 app.use(express.json({ limit: '2mb' })) // Increased limit for profile pictures
 
-// Initialize database
+// Initialize databases
 initDatabase()
+initUsersDb()
 
 // Routes
 app.use('/api/player', playerRoutes)

@@ -33,7 +33,7 @@ export function authMiddleware(req: Request, res: Response, next: Function) {
 }
 
 // Register new user
-router.post('/register', (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
   const { username, password, displayName } = req.body
 
   if (!username || !password) {
@@ -48,50 +48,60 @@ router.post('/register', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Password must be at least 6 characters' })
   }
 
-  const user = createUser(username, password, displayName)
+  try {
+    const user = await createUser(username, password, displayName)
 
-  if (!user) {
-    return res.status(409).json({ error: 'Username already taken' })
+    if (!user) {
+      return res.status(409).json({ error: 'Username already taken' })
+    }
+
+    // Create session
+    const token = generateToken()
+    sessions.set(token, {
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    })
+
+    res.status(201).json({
+      token,
+      user: getPublicUserInfo(user)
+    })
+  } catch (error) {
+    console.error('Registration error:', error)
+    res.status(500).json({ error: 'Registration failed' })
   }
-
-  // Create session
-  const token = generateToken()
-  sessions.set(token, {
-    userId: user.id,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-  })
-
-  res.status(201).json({
-    token,
-    user: getPublicUserInfo(user)
-  })
 })
 
 // Login
-router.post('/login', (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response) => {
   const { username, password } = req.body
 
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' })
   }
 
-  const user = authenticateUser(username, password)
+  try {
+    const user = await authenticateUser(username, password)
 
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid username or password' })
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid username or password' })
+    }
+
+    // Create session
+    const token = generateToken()
+    sessions.set(token, {
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    })
+
+    res.json({
+      token,
+      user: getPublicUserInfo(user)
+    })
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ error: 'Login failed' })
   }
-
-  // Create session
-  const token = generateToken()
-  sessions.set(token, {
-    userId: user.id,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-  })
-
-  res.json({
-    token,
-    user: getPublicUserInfo(user)
-  })
 })
 
 // Logout
@@ -104,19 +114,25 @@ router.post('/logout', authMiddleware, (req: Request, res: Response) => {
 })
 
 // Get current user
-router.get('/me', authMiddleware, (req: Request, res: Response) => {
+router.get('/me', authMiddleware, async (req: Request, res: Response) => {
   const userId = (req as any).userId
-  const user = getUserById(userId)
 
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' })
+  try {
+    const user = await getUserById(userId)
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    res.json({ user: getPublicUserInfo(user) })
+  } catch (error) {
+    console.error('Get user error:', error)
+    res.status(500).json({ error: 'Failed to get user' })
   }
-
-  res.json({ user: getPublicUserInfo(user) })
 })
 
 // Update profile
-router.patch('/profile', authMiddleware, (req: Request, res: Response) => {
+router.patch('/profile', authMiddleware, async (req: Request, res: Response) => {
   const userId = (req as any).userId
   const { displayName, bio, profilePicture } = req.body
 
@@ -134,13 +150,18 @@ router.patch('/profile', authMiddleware, (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Profile picture too large' })
   }
 
-  const user = updateUserProfile(userId, { displayName, bio, profilePicture })
+  try {
+    const user = await updateUserProfile(userId, { displayName, bio, profilePicture })
 
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' })
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    res.json({ user: getPublicUserInfo(user) })
+  } catch (error) {
+    console.error('Update profile error:', error)
+    res.status(500).json({ error: 'Failed to update profile' })
   }
-
-  res.json({ user: getPublicUserInfo(user) })
 })
 
 export default router
