@@ -1,6 +1,6 @@
 // API Service for Fantasy Cards
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const API_BASE = 'https://fantasycard-production.up.railway.app/api'
 
 // Get stored token
 function getToken(): string | null {
