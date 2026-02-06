@@ -15,7 +15,7 @@ export const bossExclusiveCards: Card[] = [
       { name: 'Unyielding Slam', damage: 85, cost: 3 }
     ],
     description: 'Reward from defeating the Mountain King. An unbreakable defender.',
-    artwork: '/cards/boss_iron_guardian.png'
+    artwork: '/cards/boss_iron_guardian.jpg'
   },
   {
     id: 'boss_shadow_reaper',
@@ -30,7 +30,7 @@ export const bossExclusiveCards: Card[] = [
       { name: 'Death Sentence', damage: 100, cost: 3, effect: 'Weaken: enemy -30% attack' }
     ],
     description: 'Reward from defeating the Void Master. Harvests souls of the fallen.',
-    artwork: '/cards/boss_shadow_reaper.png'
+    artwork: '/cards/boss_shadow_reaper.jpg'
   },
   {
     id: 'boss_storm_herald',
@@ -45,7 +45,7 @@ export const bossExclusiveCards: Card[] = [
       { name: 'Tempest Fury', damage: 120, cost: 4, effect: 'Stun: skip attack' }
     ],
     description: 'Reward from defeating the Storm Tyrant. Commands the very heavens.',
-    artwork: '/cards/boss_storm_herald.png'
+    artwork: '/cards/boss_storm_herald.jpg'
   },
   {
     id: 'boss_phoenix_lord',
@@ -60,7 +60,7 @@ export const bossExclusiveCards: Card[] = [
       { name: 'Rebirth Inferno', damage: 130, cost: 4, effect: 'Heal 50 HP' }
     ],
     description: 'Reward from defeating the Flame Emperor. Death is merely a temporary setback.',
-    artwork: '/cards/boss_phoenix_lord.png'
+    artwork: '/cards/boss_phoenix_lord.jpg'
   },
   {
     id: 'boss_world_serpent',
@@ -75,7 +75,7 @@ export const bossExclusiveCards: Card[] = [
       { name: "World's End", damage: 160, cost: 5, effect: 'Stun: skip attack' }
     ],
     description: 'Reward from defeating the Final Champion. The serpent that encircles the world.',
-    artwork: '/cards/boss_world_serpent.png'
+    artwork: '/cards/boss_world_serpent.jpg'
   }
 ]
 
