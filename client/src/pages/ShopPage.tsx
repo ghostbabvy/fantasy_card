@@ -306,7 +306,7 @@ export default function ShopPage() {
         <div className="bg-white/5 rounded-xl p-4 mb-4">
           <div className="text-sm text-white/60 mb-2">Sell Values by Rarity:</div>
           <div className="flex flex-wrap gap-3">
-            {(['common', 'uncommon', 'rare', 'epic', 'legendary'] as Rarity[]).map(rarity => (
+            {(['basic', 'uncommon', 'mythical', 'legendary', 'celestial'] as Rarity[]).map(rarity => (
               <div key={rarity} className={`px-3 py-1 rounded-lg text-sm rarity-${rarity}`}>
                 {rarity.charAt(0).toUpperCase() + rarity.slice(1)}: 🪙 {sellValues[rarity]}
               </div>

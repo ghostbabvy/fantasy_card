@@ -110,11 +110,11 @@ export default function BattlePage() {
       let score = 0
 
       const rarityScores: Record<Rarity, number> = {
-        legendary: 100,
-        epic: 80,
-        rare: 60,
+        celestial: 100,
+        legendary: 80,
+        mythical: 60,
         uncommon: 40,
-        common: 20
+        basic: 20
       }
       score += rarityScores[card.rarity]
 

@@ -16,7 +16,7 @@ export default function CollectionPage() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
 
   const elements: Element[] = ['fire', 'water', 'nature', 'earth', 'lightning', 'shadow', 'light', 'ice']
-  const rarities: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
+  const rarities: Rarity[] = ['basic', 'uncommon', 'mythical', 'legendary', 'celestial']
 
   // Filter cards
   const filteredCards = cards.filter(card => {

@@ -1,6 +1,6 @@
 export type Element = 'fire' | 'water' | 'nature' | 'earth' | 'lightning' | 'shadow' | 'light' | 'ice' | 'normal'
 
-export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+export type Rarity = 'basic' | 'uncommon' | 'mythical' | 'legendary' | 'celestial'
 
 export type CardType = 'creature' | 'spell' | 'equipment'
 
@@ -91,11 +91,11 @@ export const elementAdvantages: Record<Element, Element> = {
 
 // Rarity colors
 export const rarityColors: Record<Rarity, string> = {
-  common: '#9ca3af',
-  uncommon: '#22c55e',
-  rare: '#3b82f6',
-  epic: '#a855f7',
-  legendary: '#f59e0b'
+  basic: '#9ca3af',      // Gray
+  uncommon: '#22c55e',   // Green
+  mythical: '#a855f7',   // Purple
+  legendary: '#f59e0b',  // Gold
+  celestial: '#ec4899'   // Pink/Magenta (will have rainbow effect)
 }
 
 // Element colors
@@ -113,20 +113,20 @@ export const elementColors: Record<Element, string> = {
 
 // Dust values
 export const dustValues: Record<Rarity, { disenchant: number; craft: number }> = {
-  common: { disenchant: 5, craft: 40 },
+  basic: { disenchant: 5, craft: 40 },
   uncommon: { disenchant: 20, craft: 100 },
-  rare: { disenchant: 100, craft: 400 },
-  epic: { disenchant: 400, craft: 1600 },
-  legendary: { disenchant: 1600, craft: 3200 }
+  mythical: { disenchant: 100, craft: 400 },
+  legendary: { disenchant: 400, craft: 1600 },
+  celestial: { disenchant: 1600, craft: 3200 }
 }
 
 // Sell values (coins)
 export const sellValues: Record<Rarity, number> = {
-  common: 10,
+  basic: 10,
   uncommon: 25,
-  rare: 75,
-  epic: 200,
-  legendary: 500
+  mythical: 75,
+  legendary: 200,
+  celestial: 500
 }
 
 // Achievement types

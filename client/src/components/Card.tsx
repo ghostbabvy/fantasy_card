@@ -40,6 +40,15 @@ export default function Card({
   const rarityColor = rarityColors[card.rarity]
   const elementColor = elementColors[card.element]
 
+  // Rarity-based CSS classes
+  const rarityClasses = {
+    basic: '',
+    uncommon: 'rarity-uncommon',
+    mythical: 'rarity-mythical',
+    legendary: 'rarity-legendary',
+    celestial: 'rarity-celestial'
+  }
+
   const handleClick = (e: React.MouseEvent) => {
     if (card.artwork) {
       e.stopPropagation()
@@ -61,7 +70,7 @@ export default function Card({
         ${isPlayable ? 'ring-2 ring-green-400 ring-opacity-75' : ''}
         ${isSelected ? 'ring-4 ring-yellow-400' : ''}
         ${canAttack ? 'ring-2 ring-red-400 animate-pulse' : ''}
-        ${card.rarity === 'legendary' ? 'animate-glow' : ''}
+        ${rarityClasses[card.rarity]}
       `}
       style={{ borderColor: rarityColor }}
     >
@@ -210,15 +219,33 @@ export default function Card({
         )}
       </AnimatePresence>
 
-      {/* Rarity glow for legendary */}
-      {card.rarity === 'legendary' && (
+      {/* Rarity glow effects */}
+      {(card.rarity === 'mythical' || card.rarity === 'legendary' || card.rarity === 'celestial') && (
         <div
-          className="absolute inset-0 pointer-events-none"
+          className={`absolute inset-0 pointer-events-none ${card.rarity === 'celestial' ? 'animate-rainbow-border' : ''}`}
           style={{
-            boxShadow: `inset 0 0 20px ${rarityColor}80`
+            boxShadow: card.rarity === 'celestial'
+              ? 'inset 0 0 25px rgba(236, 72, 153, 0.6), inset 0 0 50px rgba(139, 92, 246, 0.3)'
+              : `inset 0 0 20px ${rarityColor}80`
           }}
         />
       )}
+
+      {/* Rarity indicator badge */}
+      <div
+        className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+          card.rarity === 'celestial' ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 text-white animate-pulse' :
+          card.rarity === 'legendary' ? 'bg-amber-500/90 text-black' :
+          card.rarity === 'mythical' ? 'bg-purple-500/90 text-white' :
+          card.rarity === 'uncommon' ? 'bg-green-500/90 text-white' :
+          'bg-gray-500/90 text-white'
+        }`}
+      >
+        {card.rarity === 'basic' ? 'B' :
+         card.rarity === 'uncommon' ? 'U' :
+         card.rarity === 'mythical' ? 'M' :
+         card.rarity === 'legendary' ? 'L' : 'C'}
+      </div>
     </motion.div>
   )
 }

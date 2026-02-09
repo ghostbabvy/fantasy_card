@@ -21,7 +21,7 @@ export interface ChallengeLevel {
     coins: number
     dust: number
     xp: number
-    pack?: 'basic' | 'premium' | 'mega' | 'legendary'
+    pack?: 'basic' | 'premium' | 'mega' | 'celestial'
     exclusiveCard?: string       // Card ID of exclusive boss reward
   }
 
@@ -38,7 +38,7 @@ export const challengeLevels: ChallengeLevel[] = [
     name: `Trial ${i + 1}`,
     description: 'Face novice opponents to hone your skills.',
     isBoss: false,
-    aiDeckRarities: ['common', 'uncommon'],
+    aiDeckRarities: ['basic', 'uncommon'],
     aiDamageModifier: 0.8 + (i * 0.02), // 80-96%
     playerHpBonus: 10 - (i * 1), // +10 to +2
     aiBehavior: i < 5 ? 'weakest' : 'strongest',
@@ -59,7 +59,7 @@ export const challengeLevels: ChallengeLevel[] = [
     isBoss: true,
     bossName: 'Mountain King',
     bossTitle: 'Guardian of the Earth',
-    aiDeckRarities: ['uncommon', 'rare'],
+    aiDeckRarities: ['uncommon', 'mythical'],
     aiDamageModifier: 1.0,
     playerHpBonus: 0,
     aiBehavior: 'strongest',
@@ -80,7 +80,7 @@ export const challengeLevels: ChallengeLevel[] = [
     name: `Challenge ${i + 11}`,
     description: 'Intermediate opponents with mixed decks.',
     isBoss: false,
-    aiDeckRarities: ['uncommon', 'rare'],
+    aiDeckRarities: ['uncommon', 'mythical'],
     aiDamageModifier: 0.9 + (i * 0.02), // 90-106%
     playerHpBonus: 5 - (i * 1), // +5 to -3
     aiBehavior: 'strongest',
@@ -101,7 +101,7 @@ export const challengeLevels: ChallengeLevel[] = [
     isBoss: true,
     bossName: 'Void Master',
     bossTitle: 'Lord of Shadows',
-    aiDeckRarities: ['rare', 'epic'],
+    aiDeckRarities: ['mythical', 'legendary'],
     aiDamageModifier: 1.1,
     playerHpBonus: -5,
     aiBehavior: 'smart',
@@ -122,7 +122,7 @@ export const challengeLevels: ChallengeLevel[] = [
     name: `Gauntlet ${i + 21}`,
     description: 'Advanced opponents with powerful decks.',
     isBoss: false,
-    aiDeckRarities: ['rare', 'epic'],
+    aiDeckRarities: ['mythical', 'legendary'],
     aiDamageModifier: 1.0 + (i * 0.02), // 100-116%
     playerHpBonus: -5 - i, // -5 to -13
     aiBehavior: 'strongest',
@@ -143,7 +143,7 @@ export const challengeLevels: ChallengeLevel[] = [
     isBoss: true,
     bossName: 'Storm Tyrant',
     bossTitle: 'Emperor of Thunder',
-    aiDeckRarities: ['epic', 'legendary'],
+    aiDeckRarities: ['legendary', 'celestial'],
     aiDamageModifier: 1.2,
     playerHpBonus: -15,
     aiBehavior: 'smart',
@@ -164,7 +164,7 @@ export const challengeLevels: ChallengeLevel[] = [
     name: `Elite ${i + 31}`,
     description: 'Expert opponents with elite strategies.',
     isBoss: false,
-    aiDeckRarities: ['epic', 'legendary'],
+    aiDeckRarities: ['legendary', 'celestial'],
     aiDamageModifier: 1.1 + (i * 0.02), // 110-126%
     playerHpBonus: -15 - Math.floor(i / 2), // -15 to -19
     aiBehavior: 'smart',
@@ -185,7 +185,7 @@ export const challengeLevels: ChallengeLevel[] = [
     isBoss: true,
     bossName: 'Flame Emperor',
     bossTitle: 'Ruler of the Inferno',
-    aiDeckRarities: ['legendary'],
+    aiDeckRarities: ['celestial'],
     aiDamageModifier: 1.3,
     playerHpBonus: -20,
     aiBehavior: 'smart',
@@ -206,7 +206,7 @@ export const challengeLevels: ChallengeLevel[] = [
     name: `Master ${i + 41}`,
     description: 'Master-level opponents push your limits.',
     isBoss: false,
-    aiDeckRarities: ['epic', 'legendary'],
+    aiDeckRarities: ['legendary', 'celestial'],
     aiDamageModifier: 1.2 + (i * 0.02), // 120-136%
     playerHpBonus: -20 - Math.floor(i / 2), // -20 to -24
     aiBehavior: 'smart',
@@ -227,7 +227,7 @@ export const challengeLevels: ChallengeLevel[] = [
     isBoss: true,
     bossName: 'World Champion',
     bossTitle: 'The Undefeated Legend',
-    aiDeckRarities: ['legendary'],
+    aiDeckRarities: ['celestial'],
     aiDamageModifier: 1.5,
     playerHpBonus: -30,
     aiBehavior: 'smart',
@@ -237,7 +237,7 @@ export const challengeLevels: ChallengeLevel[] = [
       coins: 2000,
       dust: 500,
       xp: 1000,
-      pack: 'legendary',
+      pack: 'celestial',
       exclusiveCard: 'boss_world_serpent'
     }
   }

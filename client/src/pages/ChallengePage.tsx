@@ -5,6 +5,7 @@ import { useGameStore } from '../stores/gameStore'
 import { useBattleStore } from '../stores/battleStore'
 import { challengeLevels, getChallengeLevel, getReplayRewards } from '../data/challengeLevels'
 import { getCardById, cards, bossExclusiveCards } from '../data/cards'
+import { Rarity } from '../types'
 import BattleArena from '../components/Battle/BattleArena'
 import Card from '../components/Card'
 
@@ -41,7 +42,7 @@ export default function ChallengePage() {
   // Auto-build deck function
   const autoBuildDeck = (): string[] => {
     const newDeck: string[] = []
-    const rarityScores = { legendary: 100, epic: 80, rare: 60, uncommon: 40, common: 20 }
+    const rarityScores: Record<Rarity, number> = { celestial: 100, legendary: 80, mythical: 60, uncommon: 40, basic: 20 }
 
     const scoredCards = ownedCards.map(card => ({
       card,

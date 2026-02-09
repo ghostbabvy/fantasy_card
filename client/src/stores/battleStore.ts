@@ -271,7 +271,7 @@ function createAIDeck(): string[] {
 
   // Get card pools - only creatures, no spells!
   const creatures = cards.filter(c => c.type === 'creature')
-  const commonCreatures = creatures.filter(c => c.rarity === 'common')
+  const commonCreatures = creatures.filter(c => c.rarity === 'basic')
   const uncommonCreatures = creatures.filter(c => c.rarity === 'uncommon')
 
   // AI deck is mostly commons with a few uncommons - NO rare/epic/legendary

@@ -66,7 +66,7 @@ export default function DeckBuilderPage() {
     }
 
     elements.forEach(el => stats.elements[el] = 0)
-    const rarities: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
+    const rarities: Rarity[] = ['basic', 'uncommon', 'mythical', 'legendary', 'celestial']
     rarities.forEach(r => stats.rarities[r] = 0)
 
     if (deckCardObjects.length === 0) return stats
@@ -124,11 +124,11 @@ export default function DeckBuilderPage() {
 
       // Rarity score
       const rarityScores: Record<Rarity, number> = {
-        legendary: 100,
-        epic: 80,
-        rare: 60,
+        celestial: 100,
+        legendary: 80,
+        mythical: 60,
         uncommon: 40,
-        common: 20
+        basic: 20
       }
       score += rarityScores[card.rarity]
 

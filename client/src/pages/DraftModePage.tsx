@@ -40,11 +40,11 @@ export default function DraftModePage() {
   // Get weighted random card from pool
   const getWeightedRandomCards = (pool: CardType[], count: number): CardType[] => {
     const weights: Record<Rarity, number> = {
-      common: 50,
+      basic: 50,
       uncommon: 30,
-      rare: 15,
-      epic: 4,
-      legendary: 1
+      mythical: 15,
+      legendary: 4,
+      celestial: 1
     }
 
     const selected: CardType[] = []
@@ -245,11 +245,11 @@ export default function DraftModePage() {
         ? (draftedCards.reduce((sum, c) => sum + c.cost, 0) / draftedCards.length).toFixed(1)
         : '0',
       rarities: {
+        celestial: draftedCards.filter(c => c.rarity === 'celestial').length,
         legendary: draftedCards.filter(c => c.rarity === 'legendary').length,
-        epic: draftedCards.filter(c => c.rarity === 'epic').length,
-        rare: draftedCards.filter(c => c.rarity === 'rare').length,
+        mythical: draftedCards.filter(c => c.rarity === 'mythical').length,
         uncommon: draftedCards.filter(c => c.rarity === 'uncommon').length,
-        common: draftedCards.filter(c => c.rarity === 'common').length
+        basic: draftedCards.filter(c => c.rarity === 'basic').length
       }
     }
     return stats
@@ -397,8 +397,8 @@ export default function DraftModePage() {
               <div className="text-white/60 text-sm">Avg Cost</div>
             </div>
             <div className="bg-white/5 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-orange-400">{getCardStats().rarities.legendary + getCardStats().rarities.epic}</div>
-              <div className="text-white/60 text-sm">Epic+</div>
+              <div className="text-2xl font-bold text-orange-400">{getCardStats().rarities.legendary + getCardStats().rarities.celestial}</div>
+              <div className="text-white/60 text-sm">Legendary+</div>
             </div>
           </div>
 

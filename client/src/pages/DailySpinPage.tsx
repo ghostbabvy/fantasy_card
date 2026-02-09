@@ -8,31 +8,31 @@ interface SpinReward {
   value: number
   type: 'coins' | 'dust' | 'pack' | 'xp'
   icon: string
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+  rarity: 'basic' | 'uncommon' | 'mythical' | 'legendary' | 'celestial'
 }
 
 // Rarity colors for the wheel segments
 const rarityColors: Record<string, string> = {
-  common: '#6b7280',     // Gray
+  basic: '#6b7280',      // Gray
   uncommon: '#22c55e',   // Green
-  rare: '#3b82f6',       // Blue
-  epic: '#a855f7',       // Purple
+  mythical: '#a855f7',   // Purple
   legendary: '#f59e0b',  // Gold/Orange
+  celestial: '#ec4899',  // Pink
 }
 
 const spinRewards: SpinReward[] = [
-  { id: '1', label: '50 Coins', value: 50, type: 'coins', icon: '🪙', rarity: 'common' },
-  { id: '2', label: '25 Dust', value: 25, type: 'dust', icon: '✨', rarity: 'common' },
+  { id: '1', label: '50 Coins', value: 50, type: 'coins', icon: '🪙', rarity: 'basic' },
+  { id: '2', label: '25 Dust', value: 25, type: 'dust', icon: '✨', rarity: 'basic' },
   { id: '3', label: '100 Coins', value: 100, type: 'coins', icon: '🪙', rarity: 'uncommon' },
   { id: '4', label: '50 Dust', value: 50, type: 'dust', icon: '✨', rarity: 'uncommon' },
-  { id: '5', label: '200 Coins', value: 200, type: 'coins', icon: '🪙', rarity: 'rare' },
-  { id: '6', label: 'Basic Pack', value: 1, type: 'pack', icon: '📦', rarity: 'rare' },
-  { id: '7', label: '100 Dust', value: 100, type: 'dust', icon: '✨', rarity: 'rare' },
-  { id: '8', label: '500 Coins', value: 500, type: 'coins', icon: '💰', rarity: 'epic' },
-  { id: '9', label: 'Premium Pack', value: 2, type: 'pack', icon: '🎁', rarity: 'epic' },
-  { id: '10', label: '250 Dust', value: 250, type: 'dust', icon: '💎', rarity: 'epic' },
-  { id: '11', label: '1000 Coins', value: 1000, type: 'coins', icon: '👑', rarity: 'legendary' },
-  { id: '12', label: 'Mega Pack', value: 3, type: 'pack', icon: '🌟', rarity: 'legendary' },
+  { id: '5', label: '200 Coins', value: 200, type: 'coins', icon: '🪙', rarity: 'mythical' },
+  { id: '6', label: 'Basic Pack', value: 1, type: 'pack', icon: '📦', rarity: 'mythical' },
+  { id: '7', label: '100 Dust', value: 100, type: 'dust', icon: '✨', rarity: 'mythical' },
+  { id: '8', label: '500 Coins', value: 500, type: 'coins', icon: '💰', rarity: 'legendary' },
+  { id: '9', label: 'Premium Pack', value: 2, type: 'pack', icon: '🎁', rarity: 'legendary' },
+  { id: '10', label: '250 Dust', value: 250, type: 'dust', icon: '💎', rarity: 'legendary' },
+  { id: '11', label: '1000 Coins', value: 1000, type: 'coins', icon: '👑', rarity: 'celestial' },
+  { id: '12', label: 'Mega Pack', value: 3, type: 'pack', icon: '🌟', rarity: 'celestial' },
 ]
 
 const SPIN_COOLDOWN = 24 * 60 * 60 * 1000 // 24 hours
@@ -70,19 +70,19 @@ export default function DailySpinPage() {
   }, [lastSpinTime])
 
   const getWeightedReward = (): SpinReward => {
-    // Weighted random selection - common more likely
+    // Weighted random selection - basic more likely
     const weights = {
-      common: 40,
+      basic: 40,
       uncommon: 30,
-      rare: 20,
-      epic: 8,
-      legendary: 2
+      mythical: 20,
+      legendary: 8,
+      celestial: 2
     }
 
     const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0)
     let random = Math.random() * totalWeight
 
-    let selectedRarity: SpinReward['rarity'] = 'common'
+    let selectedRarity: SpinReward['rarity'] = 'basic'
     for (const [rarity, weight] of Object.entries(weights)) {
       random -= weight
       if (random <= 0) {
@@ -207,7 +207,7 @@ export default function DailySpinPage() {
 
       {/* Legend */}
       <div className="flex justify-center gap-4 mb-8 flex-wrap">
-        {(['common', 'uncommon', 'rare', 'epic', 'legendary'] as const).map(rarity => (
+        {(['basic', 'uncommon', 'mythical', 'legendary', 'celestial'] as const).map(rarity => (
           <div key={rarity} className="flex items-center gap-2">
             <div
               className="w-4 h-4 rounded"

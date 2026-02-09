@@ -174,11 +174,11 @@ interface GameState {
 
 // Drop rates by rarity
 const dropRates: Record<Rarity, number> = {
-  common: 0.60,
+  basic: 0.60,
   uncommon: 0.25,
-  rare: 0.10,
-  epic: 0.04,
-  legendary: 0.01
+  mythical: 0.10,
+  legendary: 0.04,
+  celestial: 0.01
 }
 
 // Variant drop rates (applied after rarity is determined)
@@ -191,11 +191,11 @@ const variantRates: Record<CardVariant, number> = {
 
 // Dust values
 const dustValues: Record<Rarity, { disenchant: number; craft: number }> = {
-  common: { disenchant: 5, craft: 40 },
+  basic: { disenchant: 5, craft: 40 },
   uncommon: { disenchant: 20, craft: 100 },
-  rare: { disenchant: 100, craft: 400 },
-  epic: { disenchant: 400, craft: 1600 },
-  legendary: { disenchant: 1600, craft: 3200 }
+  mythical: { disenchant: 100, craft: 400 },
+  legendary: { disenchant: 400, craft: 1600 },
+  celestial: { disenchant: 1600, craft: 3200 }
 }
 
 // Variant dust multipliers (for future use)
@@ -208,32 +208,32 @@ export const variantMultipliers: Record<CardVariant, number> = {
 
 // Sell values (coins)
 const sellValues: Record<Rarity, number> = {
-  common: 10,
+  basic: 10,
   uncommon: 25,
-  rare: 75,
-  epic: 200,
-  legendary: 500
+  mythical: 75,
+  legendary: 200,
+  celestial: 500
 }
 
 // Pack configurations
 const packConfigs: Record<string, { cost: number; cardCount: number; minRarity: Rarity; guaranteedCount?: number }> = {
   basic: { cost: 100, cardCount: 3, minRarity: 'uncommon' },
-  premium: { cost: 300, cardCount: 5, minRarity: 'rare' },
-  mega: { cost: 500, cardCount: 10, minRarity: 'rare', guaranteedCount: 2 },
-  legendary: { cost: 1000, cardCount: 5, minRarity: 'epic' },
-  free: { cost: 0, cardCount: 3, minRarity: 'common' }
+  premium: { cost: 300, cardCount: 5, minRarity: 'mythical' },
+  mega: { cost: 500, cardCount: 10, minRarity: 'mythical', guaranteedCount: 2 },
+  legendary: { cost: 1000, cardCount: 5, minRarity: 'legendary' },
+  free: { cost: 0, cardCount: 3, minRarity: 'basic' }
 }
 
 // Free pack interval (12 hours in ms)
 const FREE_PACK_INTERVAL = 12 * 60 * 60 * 1000
 
 function rollRarity(minRarity?: Rarity, isPityGuaranteed?: boolean): Rarity {
-  if (isPityGuaranteed) return 'legendary'
+  if (isPityGuaranteed) return 'celestial'
 
   const roll = Math.random()
   let cumulative = 0
 
-  const rarities: Rarity[] = ['legendary', 'epic', 'rare', 'uncommon', 'common']
+  const rarities: Rarity[] = ['celestial', 'legendary', 'mythical', 'uncommon', 'basic']
   const minIndex = minRarity ? rarities.indexOf(minRarity) : rarities.length - 1
 
   for (let i = 0; i <= minIndex; i++) {
@@ -244,7 +244,7 @@ function rollRarity(minRarity?: Rarity, isPityGuaranteed?: boolean): Rarity {
     }
   }
 
-  return minRarity || 'common'
+  return minRarity || 'basic'
 }
 
 function rollVariant(): CardVariant {
@@ -264,8 +264,8 @@ function rollVariant(): CardVariant {
 function getRandomCardOfRarity(rarity: Rarity): string {
   const cardsOfRarity = cards.filter(c => c.rarity === rarity)
   if (cardsOfRarity.length === 0) {
-    const commonCards = cards.filter(c => c.rarity === 'common')
-    return commonCards[Math.floor(Math.random() * commonCards.length)].id
+    const basicCards = cards.filter(c => c.rarity === 'basic')
+    return basicCards[Math.floor(Math.random() * basicCards.length)].id
   }
   return cardsOfRarity[Math.floor(Math.random() * cardsOfRarity.length)].id
 }
@@ -273,9 +273,9 @@ function getRandomCardOfRarity(rarity: Rarity): string {
 // Generate starter collection
 function getStarterCollection(): Record<string, OwnedCard> {
   const collection: Record<string, OwnedCard> = {}
-  const commonCards = cards.filter(c => c.rarity === 'common')
+  const basicCards = cards.filter(c => c.rarity === 'basic')
 
-  commonCards.forEach(card => {
+  basicCards.forEach(card => {
     collection[card.id] = {
       quantity: 2,
       variants: { normal: 2, holo: 0, fullart: 0, secret: 0 },

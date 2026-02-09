@@ -41,8 +41,8 @@ export default function PackOpening({ packType, cards, onClose }: PackOpeningPro
   })).filter(c => c.card)
 
   // Check for special pulls
-  const hasRare = cardData.some(c => c.card && ['rare', 'epic', 'legendary'].includes(c.card.rarity))
-  const hasLegendary = cardData.some(c => c.card?.rarity === 'legendary')
+  const hasRare = cardData.some(c => c.card && ['mythical', 'legendary', 'celestial'].includes(c.card.rarity))
+  const hasLegendary = cardData.some(c => c.card?.rarity === 'celestial')
   const hasSpecialVariant = cardData.some(c => c.variant !== 'normal')
 
   useEffect(() => {

@@ -7,7 +7,7 @@ export const bossExclusiveCards: Card[] = [
     name: 'Iron Guardian',
     type: 'creature',
     element: 'earth',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     hp: 140,
     attacks: [
@@ -22,7 +22,7 @@ export const bossExclusiveCards: Card[] = [
     name: 'Shadow Reaper',
     type: 'creature',
     element: 'shadow',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 5,
     hp: 110,
     attacks: [
@@ -37,7 +37,7 @@ export const bossExclusiveCards: Card[] = [
     name: 'Storm Herald',
     type: 'creature',
     element: 'lightning',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 6,
     hp: 130,
     attacks: [
@@ -52,7 +52,7 @@ export const bossExclusiveCards: Card[] = [
     name: 'Phoenix Lord',
     type: 'creature',
     element: 'fire',
-    rarity: 'legendary',
+    rarity: 'celestial',
     cost: 7,
     hp: 150,
     attacks: [
@@ -67,7 +67,7 @@ export const bossExclusiveCards: Card[] = [
     name: 'World Serpent',
     type: 'creature',
     element: 'nature',
-    rarity: 'legendary',
+    rarity: 'celestial',
     cost: 8,
     hp: 200,
     attacks: [
@@ -88,7 +88,7 @@ export const cards: Card[] = [
     name: 'Fire Drake',
     type: 'creature',
     element: 'fire',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     hp: 70,
     attacks: [
@@ -103,7 +103,7 @@ export const cards: Card[] = [
     name: 'Cinder Imp',
     type: 'creature',
     element: 'fire',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 1,
     hp: 60,
     attacks: [
@@ -133,7 +133,7 @@ export const cards: Card[] = [
     name: 'Pyroclast',
     type: 'creature',
     element: 'fire',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     hp: 80,
     attacks: [
@@ -148,7 +148,7 @@ export const cards: Card[] = [
     name: 'Elder Wyrm',
     type: 'creature',
     element: 'fire',
-    rarity: 'legendary',
+    rarity: 'celestial',
     cost: 7,
     hp: 180,
     attacks: [
@@ -163,7 +163,7 @@ export const cards: Card[] = [
     name: 'Blazing Orb',
     type: 'spell',
     element: 'fire',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 3,
     effect: 'Deal 80 damage to one enemy.',
     description: 'A classic spell of destruction.',
@@ -176,7 +176,7 @@ export const cards: Card[] = [
     name: 'Tidal Sprite',
     type: 'creature',
     element: 'water',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 1,
     hp: 60,
     attacks: [
@@ -191,7 +191,7 @@ export const cards: Card[] = [
     name: 'Reef Warden',
     type: 'creature',
     element: 'water',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     hp: 90,
     attacks: [
@@ -221,7 +221,7 @@ export const cards: Card[] = [
     name: 'Abyssal Serpent',
     type: 'creature',
     element: 'water',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 5,
     hp: 130,
     attacks: [
@@ -236,7 +236,7 @@ export const cards: Card[] = [
     name: 'Primordial Leviathan',
     type: 'creature',
     element: 'water',
-    rarity: 'legendary',
+    rarity: 'celestial',
     cost: 8,
     hp: 200,
     attacks: [
@@ -251,7 +251,7 @@ export const cards: Card[] = [
     name: 'Mending Mist',
     type: 'spell',
     element: 'water',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     effect: 'Heal 70 HP to one ally.',
     description: 'Blessed waters from the heavens.',
@@ -264,7 +264,7 @@ export const cards: Card[] = [
     name: 'Timber Wolf',
     type: 'creature',
     element: 'nature',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     hp: 80,
     attacks: [
@@ -279,7 +279,7 @@ export const cards: Card[] = [
     name: 'Briar Beast',
     type: 'creature',
     element: 'nature',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 1,
     hp: 70,
     attacks: [
@@ -309,7 +309,7 @@ export const cards: Card[] = [
     name: 'Ancient Oak',
     type: 'creature',
     element: 'nature',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 5,
     hp: 160,
     attacks: [
@@ -324,7 +324,7 @@ export const cards: Card[] = [
     name: 'Marsh Hydra',
     type: 'creature',
     element: 'nature',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 6,
     hp: 150,
     attacks: [
@@ -352,7 +352,7 @@ export const cards: Card[] = [
     name: 'Stone Sentinel',
     type: 'creature',
     element: 'earth',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 3,
     hp: 120,
     attacks: [
@@ -367,7 +367,7 @@ export const cards: Card[] = [
     name: 'Cavern Lurker',
     type: 'creature',
     element: 'earth',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     hp: 80,
     attacks: [
@@ -397,7 +397,7 @@ export const cards: Card[] = [
     name: 'Peak Colossus',
     type: 'creature',
     element: 'earth',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 7,
     hp: 180,
     attacks: [
@@ -412,7 +412,7 @@ export const cards: Card[] = [
     name: 'Earthshatter',
     type: 'spell',
     element: 'earth',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 5,
     effect: 'Deal 70 damage to ALL creatures.',
     description: 'The ground splits and trembles.',
@@ -425,7 +425,7 @@ export const cards: Card[] = [
     name: 'Volt Wisp',
     type: 'creature',
     element: 'lightning',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 1,
     hp: 60,
     attacks: [
@@ -440,7 +440,7 @@ export const cards: Card[] = [
     name: 'Storm Raptor',
     type: 'creature',
     element: 'lightning',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     hp: 80,
     attacks: [
@@ -455,7 +455,7 @@ export const cards: Card[] = [
     name: 'Tempest Spirit',
     type: 'creature',
     element: 'lightning',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     hp: 100,
     attacks: [
@@ -470,7 +470,7 @@ export const cards: Card[] = [
     name: 'Stormlord',
     type: 'creature',
     element: 'lightning',
-    rarity: 'legendary',
+    rarity: 'celestial',
     cost: 7,
     hp: 150,
     attacks: [
@@ -498,7 +498,7 @@ export const cards: Card[] = [
     name: 'Gloom Sprite',
     type: 'creature',
     element: 'shadow',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 1,
     hp: 60,
     attacks: [
@@ -513,7 +513,7 @@ export const cards: Card[] = [
     name: 'Dusk Hunter',
     type: 'creature',
     element: 'shadow',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     hp: 80,
     attacks: [
@@ -528,7 +528,7 @@ export const cards: Card[] = [
     name: 'Phantom Blade',
     type: 'creature',
     element: 'shadow',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     hp: 70,
     attacks: [
@@ -543,7 +543,7 @@ export const cards: Card[] = [
     name: 'Abyssal Overlord',
     type: 'creature',
     element: 'shadow',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 6,
     hp: 120,
     attacks: [
@@ -558,7 +558,7 @@ export const cards: Card[] = [
     name: 'Forbidden Pact',
     type: 'spell',
     element: 'shadow',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 3,
     effect: 'Draw 3 cards. Take 20 damage.',
     description: 'Power comes at a price.',
@@ -571,7 +571,7 @@ export const cards: Card[] = [
     name: 'Radiant Defender',
     type: 'creature',
     element: 'light',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     hp: 100,
     attacks: [
@@ -586,7 +586,7 @@ export const cards: Card[] = [
     name: 'Dawn Acolyte',
     type: 'creature',
     element: 'light',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 1,
     hp: 70,
     attacks: [
@@ -601,7 +601,7 @@ export const cards: Card[] = [
     name: 'Luna Bunny',
     type: 'creature',
     element: 'light',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 1,
     hp: 60,
     attacks: [
@@ -616,7 +616,7 @@ export const cards: Card[] = [
     name: 'Celestial Hare',
     type: 'creature',
     element: 'light',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 3,
     hp: 110,
     attacks: [
@@ -646,7 +646,7 @@ export const cards: Card[] = [
     name: 'Mystic Sage',
     type: 'creature',
     element: 'light',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 5,
     hp: 100,
     attacks: [
@@ -661,7 +661,7 @@ export const cards: Card[] = [
     name: 'Seraphim',
     type: 'creature',
     element: 'light',
-    rarity: 'legendary',
+    rarity: 'celestial',
     cost: 8,
     hp: 170,
     attacks: [
@@ -676,7 +676,7 @@ export const cards: Card[] = [
     name: 'Banishing Light',
     type: 'spell',
     element: 'light',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 5,
     effect: 'Destroy one enemy creature.',
     description: 'Divine judgment strikes down evil.',
@@ -689,7 +689,7 @@ export const cards: Card[] = [
     name: 'Frost Sprite',
     type: 'creature',
     element: 'ice',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 1,
     hp: 60,
     attacks: [
@@ -704,7 +704,7 @@ export const cards: Card[] = [
     name: 'Arctic Wolf',
     type: 'creature',
     element: 'ice',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     hp: 80,
     attacks: [
@@ -734,7 +734,7 @@ export const cards: Card[] = [
     name: 'Glacier Behemoth',
     type: 'creature',
     element: 'ice',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 5,
     hp: 150,
     attacks: [
@@ -749,7 +749,7 @@ export const cards: Card[] = [
     name: 'Frostfire Phoenix',
     type: 'creature',
     element: 'ice',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 6,
     hp: 120,
     attacks: [
@@ -764,7 +764,7 @@ export const cards: Card[] = [
     name: 'Empress of Winter',
     type: 'creature',
     element: 'ice',
-    rarity: 'legendary',
+    rarity: 'celestial',
     cost: 8,
     hp: 170,
     attacks: [
@@ -803,7 +803,7 @@ export const cards: Card[] = [
     name: 'Last Resort',
     type: 'spell',
     element: 'light',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 2,
     effect: 'Heal active creature for 50 HP. Draw 1 card.',
     description: 'When all seems lost, hope remains.',
@@ -814,7 +814,7 @@ export const cards: Card[] = [
     name: 'Miracle',
     type: 'spell',
     element: 'light',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 5,
     effect: 'Fully heal active creature to max HP.',
     description: 'A true miracle of divine power.',
@@ -836,7 +836,7 @@ export const cards: Card[] = [
     name: 'Vital Growth',
     type: 'spell',
     element: 'nature',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 3,
     effect: 'Heal all your creatures for 40 HP.',
     description: 'Life energy spreads to all allies.',
@@ -847,7 +847,7 @@ export const cards: Card[] = [
     name: 'Ocean\'s Embrace',
     type: 'spell',
     element: 'water',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     effect: 'Heal active creature for 100 HP.',
     description: 'The sea mother protects her children.',
@@ -858,7 +858,7 @@ export const cards: Card[] = [
     name: 'Frozen Shield',
     type: 'spell',
     element: 'ice',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 3,
     effect: 'Heal 40 HP. Block next 30 damage.',
     description: 'A shield of impenetrable ice.',
@@ -869,7 +869,7 @@ export const cards: Card[] = [
     name: 'Soul Siphon',
     type: 'spell',
     element: 'shadow',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     effect: 'Deal 80 damage. Heal your creature for damage dealt.',
     description: 'Take their life force as your own.',
@@ -902,7 +902,7 @@ export const cards: Card[] = [
     name: 'Lightning Infusion',
     type: 'spell',
     element: 'lightning',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 3,
     effect: 'Gain 3 extra energy this turn.',
     description: 'Raw power courses through you.',
@@ -915,7 +915,7 @@ export const cards: Card[] = [
     name: 'High Priest',
     type: 'creature',
     element: 'light',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     hp: 110,
     attacks: [
@@ -930,7 +930,7 @@ export const cards: Card[] = [
     name: 'Sylvan Guardian',
     type: 'creature',
     element: 'nature',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     hp: 120,
     attacks: [
@@ -960,7 +960,7 @@ export const cards: Card[] = [
     name: 'Bastion',
     type: 'creature',
     element: 'earth',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 6,
     hp: 220,
     attacks: [
@@ -975,7 +975,7 @@ export const cards: Card[] = [
     name: 'Eternal Phoenix',
     type: 'creature',
     element: 'fire',
-    rarity: 'legendary',
+    rarity: 'celestial',
     cost: 7,
     hp: 140,
     attacks: [
@@ -990,7 +990,7 @@ export const cards: Card[] = [
     name: 'Blood Emperor',
     type: 'creature',
     element: 'shadow',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 6,
     hp: 130,
     attacks: [
@@ -1020,7 +1020,7 @@ export const cards: Card[] = [
     name: 'Storm Pillar',
     type: 'creature',
     element: 'lightning',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     hp: 120,
     attacks: [
@@ -1035,7 +1035,7 @@ export const cards: Card[] = [
     name: 'Divine Protector',
     type: 'creature',
     element: 'light',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 5,
     hp: 130,
     attacks: [
@@ -1050,7 +1050,7 @@ export const cards: Card[] = [
     name: 'Venomwing',
     type: 'creature',
     element: 'nature',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 6,
     hp: 140,
     attacks: [
@@ -1080,7 +1080,7 @@ export const cards: Card[] = [
     name: 'Infernal Dancer',
     type: 'creature',
     element: 'fire',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     hp: 100,
     attacks: [
@@ -1095,7 +1095,7 @@ export const cards: Card[] = [
     name: 'Dark Mender',
     type: 'creature',
     element: 'shadow',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 4,
     hp: 90,
     attacks: [
@@ -1110,7 +1110,7 @@ export const cards: Card[] = [
     name: 'Tidal Colossus',
     type: 'creature',
     element: 'water',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 7,
     hp: 190,
     attacks: [
@@ -1125,7 +1125,7 @@ export const cards: Card[] = [
     name: 'Glacial Sentinel',
     type: 'creature',
     element: 'ice',
-    rarity: 'rare',
+    rarity: 'mythical',
     cost: 5,
     hp: 160,
     attacks: [
@@ -1140,7 +1140,7 @@ export const cards: Card[] = [
     name: 'Tempest Wyrm',
     type: 'creature',
     element: 'lightning',
-    rarity: 'legendary',
+    rarity: 'celestial',
     cost: 8,
     hp: 180,
     attacks: [
@@ -1157,7 +1157,7 @@ export const cards: Card[] = [
     name: 'Mind Expansion',
     type: 'spell',
     element: 'light',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 2,
     effect: 'Draw 2 cards.',
     description: 'Knowledge is the greatest power.',
@@ -1179,7 +1179,7 @@ export const cards: Card[] = [
     name: 'All or Nothing',
     type: 'spell',
     element: 'shadow',
-    rarity: 'epic',
+    rarity: 'legendary',
     cost: 4,
     effect: 'Draw 4 cards. Take 40 damage to player.',
     description: 'Risk everything to gain everything.',
@@ -1192,7 +1192,7 @@ export const cards: Card[] = [
     name: 'Fluffpup',
     type: 'creature',
     element: 'normal',
-    rarity: 'common',
+    rarity: 'basic',
     cost: 1,
     hp: 60,
     attacks: [
