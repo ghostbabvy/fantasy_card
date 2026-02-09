@@ -253,6 +253,13 @@ export const friendsApi = {
     const data = await res.json()
     return data.user
   },
+
+  async getSentRequests(): Promise<FriendRequest[]> {
+    const res = await fetchWithAuth('/friends/requests/sent')
+    if (!res.ok) throw new Error('Failed to get sent requests')
+    const data = await res.json()
+    return data.requests
+  },
 }
 
 // Leaderboard API

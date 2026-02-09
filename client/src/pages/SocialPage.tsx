@@ -197,12 +197,14 @@ export default function SocialPage() {
 
   const loadFriends = async () => {
     try {
-      const [friendsList, requests] = await Promise.all([
+      const [friendsList, requests, sent] = await Promise.all([
         friendsApi.getFriends(),
         friendsApi.getPendingRequests(),
+        friendsApi.getSentRequests(),
       ])
       setFriends(friendsList)
       setPendingRequests(requests)
+      setSentRequests(sent)
     } catch (e) {
       console.error('Failed to load friends:', e)
     }
@@ -222,10 +224,18 @@ export default function SocialPage() {
     }
   }
 
+  // Sent friend requests state
+  const [sentRequests, setSentRequests] = useState<FriendRequest[]>([])
+  const [successMessage, setSuccessMessage] = useState('')
+
   const handleSendFriendRequest = async (targetUserId: string) => {
     try {
       await friendsApi.sendFriendRequest(targetUserId)
+      // Add to local state for immediate feedback
+      setSentRequests(prev => [...prev, { id: `temp_${Date.now()}`, fromUserId: user?.id || '', toUserId: targetUserId, status: 'pending' as const, createdAt: new Date().toISOString() }])
       setSearchResults(prev => prev.filter(u => u.id !== targetUserId))
+      setSuccessMessage('Friend request sent! They must accept to become friends.')
+      setTimeout(() => setSuccessMessage(''), 4000)
     } catch (e: any) {
       setError(e.message)
     }
@@ -489,6 +499,13 @@ export default function SocialPage() {
         </div>
       )}
 
+      {/* Success message */}
+      {successMessage && (
+        <div className="bg-green-500/20 border border-green-500 rounded-lg p-3 mb-4 text-green-400">
+          {successMessage}
+        </div>
+      )}
+
       {/* Not logged in - show auth form */}
       {!user ? (
         <motion.div
@@ -720,60 +737,92 @@ export default function SocialPage() {
               animate={{ opacity: 1 }}
               className="space-y-6"
             >
-              {/* Search */}
+              {/* Friends List - First */}
               <div className="bg-white/5 rounded-xl p-4">
-                <h3 className="font-bold mb-3">Find Players</h3>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                    className="flex-1 px-4 py-2 bg-black/30 rounded-lg border border-white/10"
-                    placeholder="Search by username..."
-                  />
-                  <button
-                    onClick={handleSearch}
-                    disabled={isSearching || searchQuery.length < 2}
-                    className="px-4 py-2 bg-purple-500 hover:bg-purple-400 rounded-lg font-bold disabled:opacity-50"
-                  >
-                    Search
-                  </button>
-                </div>
-
-                {searchResults.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {searchResults.map(result => (
-                      <div key={result.id} className="flex items-center justify-between bg-black/20 rounded-lg p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
-                            {result.profilePicture ? (
-                              <img src={result.profilePicture} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              '&#128100;'
-                            )}
+                <h3 className="font-bold mb-3 flex items-center gap-2">
+                  <span dangerouslySetInnerHTML={{ __html: '&#128101;' }} />
+                  My Friends ({friends.length})
+                </h3>
+                {friends.length === 0 ? (
+                  <p className="text-white/60 text-center py-8">No friends yet. Use the search below to add friends!</p>
+                ) : (
+                  <div className="space-y-2">
+                    {friends.map(friend => {
+                      const canGift = canSendGiftTo(friend.id)
+                      const unread = unreadCounts[friend.id] || 0
+                      return (
+                        <div key={friend.id} className="flex items-center justify-between bg-black/20 rounded-lg p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
+                              {friend.profilePicture ? (
+                                <img src={friend.profilePicture} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span dangerouslySetInnerHTML={{ __html: '&#128100;' }} />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-bold">{friend.displayName}</div>
+                              <div className="text-sm text-white/60">{friend.stats.battlesWon} wins</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-bold">{result.displayName}</div>
-                            <div className="text-sm text-white/60">@{result.username}</div>
+                          <div className="flex items-center gap-2">
+                            {/* Chat Button */}
+                            <button
+                              onClick={() => { setActiveTab('chat'); selectChatFriend(friend) }}
+                              className="relative w-10 h-10 bg-blue-500/20 hover:bg-blue-500/40 rounded-lg flex items-center justify-center text-lg transition-colors"
+                              title="Chat"
+                            >
+                              <span dangerouslySetInnerHTML={{ __html: '&#128172;' }} />
+                              {unread > 0 && (
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                                  {unread}
+                                </span>
+                              )}
+                            </button>
+                            {/* Gift Button */}
+                            <button
+                              onClick={() => { setActiveTab('gifts'); handleSendGift(friend.id) }}
+                              disabled={!canGift}
+                              className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg transition-colors ${
+                                canGift
+                                  ? 'bg-yellow-500/20 hover:bg-yellow-500/40'
+                                  : 'bg-gray-500/20 opacity-50 cursor-not-allowed'
+                              }`}
+                              title={canGift ? "Send Gift" : `Gift on cooldown`}
+                            >
+                              <span dangerouslySetInnerHTML={{ __html: '&#127873;' }} />
+                            </button>
+                            {/* Trade Button */}
+                            <button
+                              onClick={() => { setActiveTab('trading'); openTradeWith(friend) }}
+                              className="w-10 h-10 bg-green-500/20 hover:bg-green-500/40 rounded-lg flex items-center justify-center text-lg transition-colors"
+                              title="Trade"
+                            >
+                              <span dangerouslySetInnerHTML={{ __html: '&#128259;' }} />
+                            </button>
+                            {/* Remove Button */}
+                            <button
+                              onClick={() => handleRemoveFriend(friend.id)}
+                              className="w-10 h-10 bg-red-500/20 hover:bg-red-500/40 rounded-lg flex items-center justify-center text-lg transition-colors"
+                              title="Remove Friend"
+                            >
+                              <span dangerouslySetInnerHTML={{ __html: '&#10005;' }} />
+                            </button>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleSendFriendRequest(result.id)}
-                          className="px-3 py-1 bg-green-500 hover:bg-green-400 rounded text-sm font-bold"
-                        >
-                          Add Friend
-                        </button>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
 
-              {/* Pending Requests */}
+              {/* Pending Friend Requests (incoming) */}
               {pendingRequests.length > 0 && (
                 <div className="bg-white/5 rounded-xl p-4">
-                  <h3 className="font-bold mb-3">Friend Requests ({pendingRequests.length})</h3>
+                  <h3 className="font-bold mb-3 flex items-center gap-2">
+                    <span dangerouslySetInnerHTML={{ __html: '&#128140;' }} />
+                    Incoming Requests ({pendingRequests.length})
+                  </h3>
                   <div className="space-y-2">
                     {pendingRequests.map(request => (
                       <div key={request.id} className="flex items-center justify-between bg-black/20 rounded-lg p-3">
@@ -782,7 +831,7 @@ export default function SocialPage() {
                             {request.fromUser?.profilePicture ? (
                               <img src={request.fromUser.profilePicture} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              '&#128100;'
+                              <span dangerouslySetInnerHTML={{ __html: '&#128100;' }} />
                             )}
                           </div>
                           <div>
@@ -793,15 +842,15 @@ export default function SocialPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleAcceptRequest(request.id)}
-                            className="px-3 py-1 bg-green-500 hover:bg-green-400 rounded text-sm font-bold"
+                            className="px-4 py-2 bg-green-500 hover:bg-green-400 rounded-lg text-sm font-bold"
                           >
                             Accept
                           </button>
                           <button
                             onClick={() => handleRejectRequest(request.id)}
-                            className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-sm"
+                            className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm"
                           >
-                            Reject
+                            Decline
                           </button>
                         </div>
                       </div>
@@ -810,36 +859,102 @@ export default function SocialPage() {
                 </div>
               )}
 
-              {/* Friends List */}
-              <div className="bg-white/5 rounded-xl p-4">
-                <h3 className="font-bold mb-3">Friends ({friends.length})</h3>
-                {friends.length === 0 ? (
-                  <p className="text-white/60 text-center py-8">No friends yet. Search for players to add!</p>
-                ) : (
+              {/* Sent Friend Requests (outgoing) */}
+              {sentRequests.length > 0 && (
+                <div className="bg-white/5 rounded-xl p-4">
+                  <h3 className="font-bold mb-3 flex items-center gap-2">
+                    <span dangerouslySetInnerHTML={{ __html: '&#128228;' }} />
+                    Sent Requests ({sentRequests.length})
+                  </h3>
+                  <p className="text-sm text-white/60 mb-3">Waiting for these players to accept your request</p>
                   <div className="space-y-2">
-                    {friends.map(friend => (
-                      <div key={friend.id} className="flex items-center justify-between bg-black/20 rounded-lg p-3">
+                    {sentRequests.map(request => (
+                      <div key={request.id} className="flex items-center justify-between bg-black/20 rounded-lg p-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
-                            {friend.profilePicture ? (
-                              <img src={friend.profilePicture} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              '&#128100;'
-                            )}
+                          <div className="w-10 h-10 rounded-full bg-yellow-500/30 flex items-center justify-center">
+                            <span dangerouslySetInnerHTML={{ __html: '&#8987;' }} />
                           </div>
                           <div>
-                            <div className="font-bold">{friend.displayName}</div>
-                            <div className="text-sm text-white/60">{friend.stats.battlesWon} wins</div>
+                            <div className="font-bold text-yellow-300">Pending...</div>
+                            <div className="text-sm text-white/60">Request sent {new Date(request.createdAt).toLocaleDateString()}</div>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleRemoveFriend(friend.id)}
-                          className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-sm"
-                        >
-                          Remove
-                        </button>
+                        <span className="px-3 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm">
+                          Awaiting Response
+                        </span>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Search for New Friends - At Bottom */}
+              <div className="bg-white/5 rounded-xl p-4">
+                <h3 className="font-bold mb-3 flex items-center gap-2">
+                  <span dangerouslySetInnerHTML={{ __html: '&#128269;' }} />
+                  Add New Friends
+                </h3>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                    className="flex-1 px-4 py-2 bg-black/30 rounded-lg border border-white/10 focus:border-purple-500 focus:outline-none"
+                    placeholder="Search by username..."
+                  />
+                  <button
+                    onClick={handleSearch}
+                    disabled={isSearching || searchQuery.length < 2}
+                    className="px-4 py-2 bg-purple-500 hover:bg-purple-400 rounded-lg font-bold disabled:opacity-50"
+                  >
+                    {isSearching ? '...' : 'Search'}
+                  </button>
+                </div>
+
+                {searchResults.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm text-white/60">Search Results:</p>
+                    {searchResults.map(result => {
+                      const alreadySent = sentRequests.some(r => r.toUserId === result.id)
+                      const alreadyFriend = friends.some(f => f.id === result.id)
+                      return (
+                        <div key={result.id} className="flex items-center justify-between bg-black/20 rounded-lg p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
+                              {result.profilePicture ? (
+                                <img src={result.profilePicture} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span dangerouslySetInnerHTML={{ __html: '&#128100;' }} />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-bold">{result.displayName}</div>
+                              <div className="text-sm text-white/60">@{result.username}</div>
+                            </div>
+                          </div>
+                          {alreadyFriend ? (
+                            <span className="px-4 py-2 bg-purple-500/30 rounded-lg text-sm text-purple-300">
+                              Already Friends
+                            </span>
+                          ) : alreadySent ? (
+                            <span className="px-4 py-2 bg-yellow-500/30 rounded-lg text-sm text-yellow-300">
+                              Request Sent
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleSendFriendRequest(result.id)}
+                              className="px-4 py-2 bg-green-500 hover:bg-green-400 rounded-lg text-sm font-bold"
+                            >
+                              + Add Friend
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                    <p className="text-xs text-white/40 mt-2">
+                      Friend requests must be accepted by the other player before you become friends.
+                    </p>
                   </div>
                 )}
               </div>
