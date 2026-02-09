@@ -233,7 +233,7 @@ export default function Card({
 
       {/* Rarity indicator badge */}
       <div
-        className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+        className={`absolute bottom-12 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
           card.rarity === 'celestial' ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 text-white animate-pulse' :
           card.rarity === 'legendary' ? 'bg-amber-500/90 text-black' :
           card.rarity === 'mythical' ? 'bg-purple-500/90 text-white' :
