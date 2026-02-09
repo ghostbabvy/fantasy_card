@@ -62,6 +62,68 @@ export interface FriendRequest {
   fromUser?: User
 }
 
+// Chat message type
+export interface Message {
+  id: string
+  fromUserId: string
+  toUserId: string
+  content: string
+  createdAt: string
+  readAt?: string
+}
+
+// Trade types
+export interface TradeCard {
+  cardId: string
+  quantity: number
+}
+
+export interface Trade {
+  id: string
+  fromUserId: string
+  toUserId: string
+  status: 'pending' | 'accepted' | 'rejected' | 'cancelled'
+  offerCards: TradeCard[]
+  requestCards: TradeCard[]
+  createdAt: string
+  resolvedAt?: string
+  fromUser?: User
+  toUser?: User
+}
+
+export interface TradeLock {
+  id: string
+  tradeId: string
+  userId: string
+  cardId: string
+  quantity: number
+}
+
+// Gift types
+export interface Gift {
+  id: string
+  fromUserId: string
+  toUserId: string
+  rewardType: 'coins' | 'dust' | 'card'
+  rewardAmount: number
+  rewardCardId?: string
+  createdAt: string
+  claimedAt?: string
+  fromUser?: User
+}
+
+export interface GiftReward {
+  type: 'coins' | 'dust' | 'card'
+  amount: number
+  cardId?: string
+}
+
+// Collection item for syncing
+export interface CollectionSyncItem {
+  cardId: string
+  quantity: number
+}
+
 // Auth API
 export const authApi = {
   async register(username: string, password: string, displayName?: string): Promise<{ token: string; user: User }> {
@@ -215,5 +277,152 @@ export const leaderboardApi = {
       body: JSON.stringify(stats),
     })
     if (!res.ok) throw new Error('Failed to sync stats')
+  },
+}
+
+// Gifts API
+export const giftsApi = {
+  async sendGift(friendId: string): Promise<Gift> {
+    const res = await fetchWithAuth(`/gifts/${friendId}`, { method: 'POST' })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || 'Failed to send gift')
+    }
+    const data = await res.json()
+    return data.gift
+  },
+
+  async getPendingGifts(): Promise<Gift[]> {
+    const res = await fetchWithAuth('/gifts')
+    if (!res.ok) throw new Error('Failed to get gifts')
+    const data = await res.json()
+    return data.gifts
+  },
+
+  async claimGift(giftId: string): Promise<{ gift: Gift; reward: GiftReward }> {
+    const res = await fetchWithAuth(`/gifts/${giftId}/claim`, { method: 'POST' })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || 'Failed to claim gift')
+    }
+    return await res.json()
+  },
+
+  async getCooldowns(): Promise<Record<string, string>> {
+    const res = await fetchWithAuth('/gifts/cooldowns')
+    if (!res.ok) throw new Error('Failed to get cooldowns')
+    const data = await res.json()
+    return data.cooldowns
+  },
+
+  async canSendGift(friendId: string): Promise<boolean> {
+    const res = await fetchWithAuth(`/gifts/can-send/${friendId}`)
+    if (!res.ok) return false
+    const data = await res.json()
+    return data.canSend
+  },
+}
+
+// Chat API
+export const chatApi = {
+  async getMessages(friendId: string, limit: number = 50, before?: string): Promise<{ messages: Message[]; hasMore: boolean }> {
+    let url = `/chat/${friendId}?limit=${limit}`
+    if (before) url += `&before=${before}`
+    const res = await fetchWithAuth(url)
+    if (!res.ok) throw new Error('Failed to get messages')
+    return await res.json()
+  },
+
+  async sendMessage(friendId: string, content: string): Promise<Message> {
+    const res = await fetchWithAuth(`/chat/${friendId}`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || 'Failed to send message')
+    }
+    const data = await res.json()
+    return data.message
+  },
+
+  async markRead(friendId: string): Promise<void> {
+    const res = await fetchWithAuth(`/chat/${friendId}/read`, { method: 'POST' })
+    if (!res.ok) throw new Error('Failed to mark as read')
+  },
+
+  async getUnreadCounts(): Promise<Record<string, number>> {
+    const res = await fetchWithAuth('/chat/unread/counts')
+    if (!res.ok) throw new Error('Failed to get unread counts')
+    const data = await res.json()
+    return data.unread
+  },
+}
+
+// Trading API
+export const tradingApi = {
+  async getTrades(): Promise<{ pending: Trade[]; sent: Trade[]; history: Trade[] }> {
+    const res = await fetchWithAuth('/trading')
+    if (!res.ok) throw new Error('Failed to get trades')
+    return await res.json()
+  },
+
+  async createTrade(toUserId: string, offerCards: TradeCard[], requestCards: TradeCard[]): Promise<Trade> {
+    const res = await fetchWithAuth('/trading', {
+      method: 'POST',
+      body: JSON.stringify({ toUserId, offerCards, requestCards }),
+    })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || 'Failed to create trade')
+    }
+    const data = await res.json()
+    return data.trade
+  },
+
+  async acceptTrade(tradeId: string): Promise<void> {
+    const res = await fetchWithAuth(`/trading/${tradeId}/accept`, { method: 'POST' })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || 'Failed to accept trade')
+    }
+  },
+
+  async rejectTrade(tradeId: string): Promise<void> {
+    const res = await fetchWithAuth(`/trading/${tradeId}/reject`, { method: 'POST' })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || 'Failed to reject trade')
+    }
+  },
+
+  async cancelTrade(tradeId: string): Promise<void> {
+    const res = await fetchWithAuth(`/trading/${tradeId}/cancel`, { method: 'POST' })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || 'Failed to cancel trade')
+    }
+  },
+
+  async getLockedCards(): Promise<TradeLock[]> {
+    const res = await fetchWithAuth('/trading/locks')
+    if (!res.ok) throw new Error('Failed to get locked cards')
+    const data = await res.json()
+    return data.locks
+  },
+
+  async syncCollection(collection: CollectionSyncItem[]): Promise<void> {
+    const res = await fetchWithAuth('/trading/collection/sync', {
+      method: 'POST',
+      body: JSON.stringify({ collection }),
+    })
+    if (!res.ok) throw new Error('Failed to sync collection')
+  },
+
+  async getServerCollection(): Promise<CollectionSyncItem[]> {
+    const res = await fetchWithAuth('/trading/collection')
+    if (!res.ok) throw new Error('Failed to get collection')
+    const data = await res.json()
+    return data.collection
   },
 }

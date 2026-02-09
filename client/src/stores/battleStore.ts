@@ -29,6 +29,9 @@ interface BattleState {
   selectedAttackIndex: number | null
   battleLog: string[]
 
+  // Attack usage tracking - key is `${instanceId}_${attackIndex}`
+  attackUses: Record<string, number>
+
   // Knockout tracking - first to 3 wins
   playerKnockouts: number
   enemyKnockouts: number
@@ -54,6 +57,9 @@ interface BattleState {
 
   // Star rating (1-3) based on performance
   battleStars: number
+
+  // Helper to get remaining uses for an attack
+  getAttackUsesRemaining: (instanceId: string, attackIndex: number, maxUses: number) => number
 
   // Actions
   startBattle: (deckCardIds: string[]) => void
@@ -359,6 +365,15 @@ function calculateDamage(attacker: BattleCard, defender: BattleCard, attackDamag
   return Math.max(1, damage) // Minimum 1 damage
 }
 
+// Get max uses for an attack based on damage (powerful = fewer uses)
+function getAttackMaxUses(attack: { damage: number; maxUses?: number }): number {
+  if (attack.maxUses !== undefined) return attack.maxUses
+  // Default: low damage = 30 uses, high damage = 15 uses
+  if (attack.damage >= 60) return 15
+  if (attack.damage >= 40) return 20
+  return 30
+}
+
 export const useBattleStore = create<BattleState>((set, get) => ({
   isInBattle: false,
   player: null,
@@ -370,6 +385,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
   winner: null,
   selectedAttackIndex: null,
   battleLog: [],
+  attackUses: {},
   playerKnockouts: 0,
   enemyKnockouts: 0,
   showCoinFlip: false,
@@ -380,6 +396,13 @@ export const useBattleStore = create<BattleState>((set, get) => ({
   // Bench targeting defaults
   selectingBenchTarget: false,
   pendingBenchAttack: null,
+
+  // Get remaining uses for an attack
+  getAttackUsesRemaining: (instanceId, attackIndex, maxUses) => {
+    const key = `${instanceId}_${attackIndex}`
+    const used = get().attackUses[key] || 0
+    return maxUses - used
+  },
 
   // Challenge mode defaults
   isChallengeBattle: false,
@@ -413,6 +436,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       winner: null,
       selectedAttackIndex: null,
       battleLog: ['First to knock out 3 cards wins!'],
+      attackUses: {},
       playerKnockouts: 0,
       enemyKnockouts: 0,
       showCoinFlip: true,
@@ -458,6 +482,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       winner: null,
       selectedAttackIndex: null,
       battleLog: [battleMessage],
+      attackUses: {},
       playerKnockouts: 0,
       enemyKnockouts: 0,
       showCoinFlip: true,
@@ -656,7 +681,21 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     if (!attackData) return
     if (state.player.energy < attackData.cost) return
 
+    // Check attack uses remaining
+    const maxUses = getAttackMaxUses(attackData)
+    const useKey = `${attacker.instanceId}_${attackIndex}`
+    const usedCount = state.attackUses[useKey] || 0
+    if (usedCount >= maxUses) {
+      set({
+        battleLog: [...state.battleLog, `${attackData.name} has no uses remaining!`]
+      })
+      return
+    }
+
     const target = attackData.target || 'active'
+
+    // Track attack usage
+    const newAttackUses = { ...state.attackUses, [useKey]: usedCount + 1 }
 
     // Handle all-bench attack (hits all bench cards at once)
     if (target === 'all-bench' && state.enemy.bench.length > 0) {
@@ -690,6 +729,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
           player: newPlayer,
           enemy: newEnemy,
           playerKnockouts: newPlayerKnockouts,
+          attackUses: newAttackUses,
           isOver: true,
           winner: 'player',
           battleStars: calculateStars(state.enemyKnockouts),
@@ -703,6 +743,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
         player: newPlayer,
         enemy: newEnemy,
         playerKnockouts: newPlayerKnockouts,
+        attackUses: newAttackUses,
         battleLog: newLog,
         selectedAttackIndex: null
       })
@@ -833,6 +874,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
             player: newPlayer,
             enemy: newEnemy,
             playerKnockouts: newPlayerKnockouts,
+            attackUses: newAttackUses,
             isOver: true,
             winner: 'player',
             battleStars: calculateStars(state.enemyKnockouts),
@@ -854,6 +896,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
           player: newPlayer,
           enemy: newEnemy,
           playerKnockouts: newPlayerKnockouts,
+          attackUses: newAttackUses,
           battleLog: newLog,
           selectedAttackIndex: null
         })
@@ -871,6 +914,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
         set({
           player: newPlayer,
           enemy: newEnemy,
+          attackUses: newAttackUses,
           isOver: true,
           winner: 'player',
           battleStars: calculateStars(state.enemyKnockouts),
@@ -886,6 +930,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     set({
       player: newPlayer,
       enemy: newEnemy,
+      attackUses: newAttackUses,
       battleLog: newLog,
       selectedAttackIndex: null
     })
@@ -1433,6 +1478,23 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     const attackData = attacker.attacks?.[attackIndex]
     if (!attackData) return
 
+    // Track attack usage
+    const attackMaxUses = getAttackMaxUses(attackData)
+    const useKey = `${attacker.instanceId}_${attackIndex}`
+    const usedCount = state.attackUses[useKey] || 0
+
+    // Check if attack is exhausted
+    if (usedCount >= attackMaxUses) {
+      set({
+        selectingBenchTarget: false,
+        pendingBenchAttack: null,
+        battleLog: [...state.battleLog, `${attackData.name} has no uses remaining!`]
+      })
+      return
+    }
+
+    const newAttackUses = { ...state.attackUses, [useKey]: usedCount + 1 }
+
     const newPlayer = { ...state.player }
     const newEnemy = { ...state.enemy }
     const newLog = [...state.battleLog]
@@ -1501,6 +1563,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
           player: newPlayer,
           enemy: newEnemy,
           playerKnockouts: newPlayerKnockouts,
+          attackUses: newAttackUses,
           isOver: true,
           winner: 'player',
           battleStars: calculateStars(state.enemyKnockouts),
@@ -1517,6 +1580,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
         player: newPlayer,
         enemy: newEnemy,
         playerKnockouts: newPlayerKnockouts,
+        attackUses: newAttackUses,
         battleLog: newLog,
         selectedAttackIndex: null,
         selectingBenchTarget: false,
@@ -1538,6 +1602,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     set({
       player: newPlayer,
       enemy: newEnemy,
+      attackUses: newAttackUses,
       battleLog: newLog,
       selectedAttackIndex: null,
       selectingBenchTarget: false,

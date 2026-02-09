@@ -7,6 +7,9 @@ import shopRoutes from './routes/shop.js'
 import authRoutes from './routes/auth.js'
 import friendsRoutes from './routes/friends.js'
 import leaderboardRoutes from './routes/leaderboard.js'
+import giftsRoutes from './routes/gifts.js'
+import chatRoutes from './routes/chat.js'
+import tradingRoutes from './routes/trading.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -25,6 +28,9 @@ app.use('/api/shop', shopRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/friends', friendsRoutes)
 app.use('/api/leaderboard', leaderboardRoutes)
+app.use('/api/gifts', giftsRoutes)
+app.use('/api/chat', chatRoutes)
+app.use('/api/trading', tradingRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

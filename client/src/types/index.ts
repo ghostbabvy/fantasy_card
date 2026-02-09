@@ -13,6 +13,7 @@ export interface Attack {
   cost: number  // Energy/mana cost to use this attack
   effect?: string  // Optional special effect description
   target?: AttackTarget  // Default is 'active' - who can be targeted
+  maxUses?: number  // Max uses per battle (default 30 for weak, 15 for strong attacks)
 }
 
 // Status effect types for battle

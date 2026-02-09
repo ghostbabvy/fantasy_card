@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { authApi, friendsApi, leaderboardApi, User, FriendRequest } from '../services/api'
+import { authApi, friendsApi, leaderboardApi, giftsApi, chatApi, tradingApi, User, FriendRequest, Gift, Message, Trade, TradeCard } from '../services/api'
 import { useGameStore } from '../stores/gameStore'
+import { getCardById } from '../data/cards'
 
-type SocialTab = 'profile' | 'friends' | 'leaderboard'
+type SocialTab = 'profile' | 'friends' | 'chat' | 'gifts' | 'trading' | 'leaderboard'
 
 export default function SocialPage() {
   const { stats, collection, setProfilePicture, setPlayerName, setPlayerBio } = useGameStore()
@@ -37,12 +38,33 @@ export default function SocialPage() {
   const [leaderboardSort, setLeaderboardSort] = useState<'battlesWon' | 'totalDamageDealt' | 'achievementPoints'>('battlesWon')
   const [userRank, setUserRank] = useState<number | null>(null)
 
+  // Chat state
+  const [selectedChatFriend, setSelectedChatFriend] = useState<User | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [messageInput, setMessageInput] = useState('')
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Gifts state
+  const [pendingGifts, setPendingGifts] = useState<Gift[]>([])
+  const [giftCooldowns, setGiftCooldowns] = useState<Record<string, string>>({})
+  const [claimingGift, setClaimingGift] = useState<string | null>(null)
+  const [lastClaimedReward, setLastClaimedReward] = useState<{ type: string; amount: number; cardId?: string } | null>(null)
+
+  // Trading state
+  const [trades, setTrades] = useState<{ pending: Trade[]; sent: Trade[]; history: Trade[] }>({ pending: [], sent: [], history: [] })
+  const [showTradeModal, setShowTradeModal] = useState(false)
+  const [tradeTarget, setTradeTarget] = useState<User | null>(null)
+  const [tradeOffer, setTradeOffer] = useState<TradeCard[]>([])
+  const [tradeRequest, setTradeRequest] = useState<TradeCard[]>([])
+  const [selectedTradeView, setSelectedTradeView] = useState<'pending' | 'sent' | 'history'>('pending')
+
   // Check if logged in on mount
   useEffect(() => {
     checkAuth()
   }, [])
 
-  // Load friends when tab changes
+  // Load data when tab changes
   useEffect(() => {
     if (user && activeTab === 'friends') {
       loadFriends()
@@ -50,7 +72,24 @@ export default function SocialPage() {
     if (activeTab === 'leaderboard') {
       loadLeaderboard()
     }
+    if (user && activeTab === 'chat') {
+      loadUnreadCounts()
+      loadFriends()
+    }
+    if (user && activeTab === 'gifts') {
+      loadGifts()
+      loadFriends()
+    }
+    if (user && activeTab === 'trading') {
+      loadTrades()
+      loadFriends()
+    }
   }, [activeTab, user, leaderboardSort])
+
+  // Scroll to bottom of messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const checkAuth = async () => {
     setIsLoading(true)
@@ -219,6 +258,166 @@ export default function SocialPage() {
     }
   }
 
+  // Chat functions
+  const loadUnreadCounts = async () => {
+    try {
+      const counts = await chatApi.getUnreadCounts()
+      setUnreadCounts(counts)
+    } catch (e) {
+      console.error('Failed to load unread counts:', e)
+    }
+  }
+
+  const loadMessages = async (friendId: string) => {
+    try {
+      const result = await chatApi.getMessages(friendId)
+      setMessages(result.messages)
+      await chatApi.markRead(friendId)
+      setUnreadCounts(prev => ({ ...prev, [friendId]: 0 }))
+    } catch (e) {
+      console.error('Failed to load messages:', e)
+    }
+  }
+
+  const handleSendMessage = async () => {
+    if (!selectedChatFriend || !messageInput.trim()) return
+    try {
+      const message = await chatApi.sendMessage(selectedChatFriend.id, messageInput.trim())
+      setMessages(prev => [...prev, message])
+      setMessageInput('')
+    } catch (e: any) {
+      setError(e.message)
+    }
+  }
+
+  const selectChatFriend = async (friend: User) => {
+    setSelectedChatFriend(friend)
+    await loadMessages(friend.id)
+  }
+
+  // Gift functions
+  const loadGifts = async () => {
+    try {
+      const [gifts, cooldowns] = await Promise.all([
+        giftsApi.getPendingGifts(),
+        giftsApi.getCooldowns()
+      ])
+      setPendingGifts(gifts)
+      setGiftCooldowns(cooldowns)
+    } catch (e) {
+      console.error('Failed to load gifts:', e)
+    }
+  }
+
+  const handleSendGift = async (friendId: string) => {
+    try {
+      await giftsApi.sendGift(friendId)
+      loadGifts()
+    } catch (e: any) {
+      setError(e.message)
+    }
+  }
+
+  const handleClaimGift = async (giftId: string) => {
+    setClaimingGift(giftId)
+    try {
+      const result = await giftsApi.claimGift(giftId)
+      setLastClaimedReward(result.reward)
+      setPendingGifts(prev => prev.filter(g => g.id !== giftId))
+      // Add reward to local store
+      if (result.reward.type === 'coins') {
+        useGameStore.getState().addCoins(result.reward.amount)
+      } else if (result.reward.type === 'dust') {
+        useGameStore.getState().addDust(result.reward.amount)
+      } else if (result.reward.type === 'card' && result.reward.cardId) {
+        useGameStore.getState().addCard(result.reward.cardId)
+      }
+      // Show reward for 2 seconds then clear
+      setTimeout(() => setLastClaimedReward(null), 2000)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setClaimingGift(null)
+    }
+  }
+
+  const canSendGiftTo = (friendId: string): boolean => {
+    const lastSent = giftCooldowns[friendId]
+    if (!lastSent) return true
+    const hoursSince = (Date.now() - new Date(lastSent).getTime()) / (1000 * 60 * 60)
+    return hoursSince >= 24
+  }
+
+  const getGiftCooldownRemaining = (friendId: string): string => {
+    const lastSent = giftCooldowns[friendId]
+    if (!lastSent) return ''
+    const hoursRemaining = 24 - (Date.now() - new Date(lastSent).getTime()) / (1000 * 60 * 60)
+    if (hoursRemaining <= 0) return ''
+    if (hoursRemaining < 1) return `${Math.ceil(hoursRemaining * 60)}m`
+    return `${Math.ceil(hoursRemaining)}h`
+  }
+
+  // Trading functions
+  const loadTrades = async () => {
+    try {
+      const result = await tradingApi.getTrades()
+      setTrades(result)
+    } catch (e) {
+      console.error('Failed to load trades:', e)
+    }
+  }
+
+  const handleCreateTrade = async () => {
+    if (!tradeTarget || (tradeOffer.length === 0 && tradeRequest.length === 0)) return
+    try {
+      await tradingApi.createTrade(tradeTarget.id, tradeOffer, tradeRequest)
+      setShowTradeModal(false)
+      setTradeOffer([])
+      setTradeRequest([])
+      setTradeTarget(null)
+      loadTrades()
+    } catch (e: any) {
+      setError(e.message)
+    }
+  }
+
+  const handleAcceptTrade = async (tradeId: string) => {
+    try {
+      await tradingApi.acceptTrade(tradeId)
+      loadTrades()
+    } catch (e: any) {
+      setError(e.message)
+    }
+  }
+
+  const handleRejectTrade = async (tradeId: string) => {
+    try {
+      await tradingApi.rejectTrade(tradeId)
+      loadTrades()
+    } catch (e: any) {
+      setError(e.message)
+    }
+  }
+
+  const handleCancelTrade = async (tradeId: string) => {
+    try {
+      await tradingApi.cancelTrade(tradeId)
+      loadTrades()
+    } catch (e: any) {
+      setError(e.message)
+    }
+  }
+
+  const openTradeWith = (friend: User) => {
+    setTradeTarget(friend)
+    setTradeOffer([])
+    setTradeRequest([])
+    setShowTradeModal(true)
+  }
+
+  // Calculate total unread for badge
+  const totalUnread = Object.values(unreadCounts).reduce((sum, c) => sum + c, 0)
+
   const loadLeaderboard = async () => {
     try {
       const data = await leaderboardApi.getLeaderboard(leaderboardSort, 50)
@@ -251,9 +450,12 @@ export default function SocialPage() {
   }
 
   const tabs = [
-    { id: 'profile' as SocialTab, label: 'Profile', icon: '&#128100;' },
-    { id: 'friends' as SocialTab, label: 'Friends', icon: '&#128101;' },
-    { id: 'leaderboard' as SocialTab, label: 'Leaderboard', icon: '&#127942;' },
+    { id: 'profile' as SocialTab, label: 'Profile', icon: '&#128100;', badge: 0 },
+    { id: 'friends' as SocialTab, label: 'Friends', icon: '&#128101;', badge: pendingRequests.length },
+    { id: 'chat' as SocialTab, label: 'Chat', icon: '&#128172;', badge: totalUnread },
+    { id: 'gifts' as SocialTab, label: 'Gifts', icon: '&#127873;', badge: pendingGifts.length },
+    { id: 'trading' as SocialTab, label: 'Trading', icon: '&#128259;', badge: trades.pending.length },
+    { id: 'leaderboard' as SocialTab, label: 'Leaderboard', icon: '&#127942;', badge: 0 },
   ]
 
   if (isLoading && !user) {
@@ -362,7 +564,7 @@ export default function SocialPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 whitespace-nowrap transition-all ${
+                className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 whitespace-nowrap transition-all relative ${
                   activeTab === tab.id
                     ? 'bg-white/20 text-white'
                     : 'bg-white/5 text-white/60 hover:bg-white/10'
@@ -370,6 +572,11 @@ export default function SocialPage() {
               >
                 <span dangerouslySetInnerHTML={{ __html: tab.icon }} />
                 {tab.label}
+                {tab.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -636,6 +843,399 @@ export default function SocialPage() {
                   </div>
                 )}
               </div>
+            </motion.div>
+          )}
+
+          {/* Chat Tab */}
+          {activeTab === 'chat' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex gap-4 h-[500px]"
+            >
+              {/* Friends list for chat */}
+              <div className="w-1/3 bg-white/5 rounded-xl p-4 overflow-y-auto">
+                <h3 className="font-bold mb-3">Chats</h3>
+                {friends.length === 0 ? (
+                  <p className="text-white/60 text-sm">Add friends to start chatting!</p>
+                ) : (
+                  <div className="space-y-2">
+                    {friends.map(friend => (
+                      <button
+                        key={friend.id}
+                        onClick={() => selectChatFriend(friend)}
+                        className={`w-full flex items-center gap-3 p-2 rounded-lg text-left ${
+                          selectedChatFriend?.id === friend.id ? 'bg-purple-500/30' : 'bg-black/20 hover:bg-black/30'
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
+                          {friend.profilePicture ? (
+                            <img src={friend.profilePicture} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span dangerouslySetInnerHTML={{ __html: '&#128100;' }} />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold truncate">{friend.displayName}</div>
+                        </div>
+                        {unreadCounts[friend.id] > 0 && (
+                          <span className="w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                            {unreadCounts[friend.id]}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Chat messages */}
+              <div className="flex-1 bg-white/5 rounded-xl p-4 flex flex-col">
+                {selectedChatFriend ? (
+                  <>
+                    <div className="flex items-center gap-3 pb-3 border-b border-white/10 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
+                        {selectedChatFriend.profilePicture ? (
+                          <img src={selectedChatFriend.profilePicture} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span dangerouslySetInnerHTML={{ __html: '&#128100;' }} />
+                        )}
+                      </div>
+                      <span className="font-bold">{selectedChatFriend.displayName}</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-2 mb-3">
+                      {messages.map(msg => (
+                        <div
+                          key={msg.id}
+                          className={`flex ${msg.fromUserId === user?.id ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[70%] px-3 py-2 rounded-lg ${
+                              msg.fromUserId === user?.id
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-black/30 text-white'
+                            }`}
+                          >
+                            <p>{msg.content}</p>
+                            <p className="text-[10px] opacity-60 mt-1">
+                              {new Date(msg.createdAt).toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={messagesEndRef} />
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={messageInput}
+                        onChange={e => setMessageInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                        className="flex-1 px-4 py-2 bg-black/30 rounded-lg border border-white/10"
+                        placeholder="Type a message..."
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!messageInput.trim()}
+                        className="px-4 py-2 bg-purple-500 hover:bg-purple-400 rounded-lg font-bold disabled:opacity-50"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-white/60">
+                    Select a friend to start chatting
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Gifts Tab */}
+          {activeTab === 'gifts' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-6"
+            >
+              {/* Claimed reward animation */}
+              {lastClaimedReward && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+                >
+                  <div className="text-center">
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ repeat: 2, duration: 0.3 }}
+                      className="text-6xl mb-4"
+                    >
+                      {lastClaimedReward.type === 'coins' ? '🪙' : lastClaimedReward.type === 'dust' ? '✨' : '🃏'}
+                    </motion.div>
+                    <p className="text-2xl font-bold">
+                      +{lastClaimedReward.amount} {lastClaimedReward.type === 'card' ? 'Card' : lastClaimedReward.type}!
+                    </p>
+                    {lastClaimedReward.cardId && (
+                      <p className="text-white/60">{getCardById(lastClaimedReward.cardId)?.name}</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Pending Gifts */}
+              <div className="bg-white/5 rounded-xl p-4">
+                <h3 className="font-bold mb-3 flex items-center gap-2">
+                  <span dangerouslySetInnerHTML={{ __html: '&#127873;' }} />
+                  Gifts to Claim ({pendingGifts.length})
+                </h3>
+                {pendingGifts.length === 0 ? (
+                  <p className="text-white/60 text-center py-8">No pending gifts. Check back later!</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {pendingGifts.map(gift => (
+                      <div key={gift.id} className="bg-black/20 rounded-lg p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
+                            {gift.fromUser?.profilePicture ? (
+                              <img src={gift.fromUser.profilePicture} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span dangerouslySetInnerHTML={{ __html: '&#128100;' }} />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold">{gift.fromUser?.displayName}</p>
+                            <p className="text-xs text-white/60">Sent you a gift!</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleClaimGift(gift.id)}
+                          disabled={claimingGift === gift.id}
+                          className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 rounded-lg font-bold disabled:opacity-50"
+                        >
+                          {claimingGift === gift.id ? '...' : 'Claim!'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Send Gifts */}
+              <div className="bg-white/5 rounded-xl p-4">
+                <h3 className="font-bold mb-3">Send Daily Gifts</h3>
+                {friends.length === 0 ? (
+                  <p className="text-white/60 text-center py-8">Add friends to send gifts!</p>
+                ) : (
+                  <div className="space-y-2">
+                    {friends.map(friend => {
+                      const canSend = canSendGiftTo(friend.id)
+                      const cooldown = getGiftCooldownRemaining(friend.id)
+                      return (
+                        <div key={friend.id} className="flex items-center justify-between bg-black/20 rounded-lg p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
+                              {friend.profilePicture ? (
+                                <img src={friend.profilePicture} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span dangerouslySetInnerHTML={{ __html: '&#128100;' }} />
+                              )}
+                            </div>
+                            <span className="font-bold">{friend.displayName}</span>
+                          </div>
+                          <button
+                            onClick={() => handleSendGift(friend.id)}
+                            disabled={!canSend}
+                            className={`px-4 py-2 rounded-lg font-bold ${
+                              canSend
+                                ? 'bg-green-500 hover:bg-green-400'
+                                : 'bg-gray-600 cursor-not-allowed'
+                            }`}
+                          >
+                            {canSend ? 'Send Gift' : `Wait ${cooldown}`}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Trading Tab */}
+          {activeTab === 'trading' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-6"
+            >
+              {/* Trade view selector */}
+              <div className="flex gap-2">
+                {[
+                  { id: 'pending' as const, label: 'Incoming', count: trades.pending.length },
+                  { id: 'sent' as const, label: 'Sent', count: trades.sent.length },
+                  { id: 'history' as const, label: 'History', count: trades.history.length },
+                ].map(view => (
+                  <button
+                    key={view.id}
+                    onClick={() => setSelectedTradeView(view.id)}
+                    className={`px-4 py-2 rounded-lg font-medium ${
+                      selectedTradeView === view.id
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    }`}
+                  >
+                    {view.label} ({view.count})
+                  </button>
+                ))}
+              </div>
+
+              {/* Trades list */}
+              <div className="bg-white/5 rounded-xl p-4">
+                {selectedTradeView === 'pending' && trades.pending.length === 0 && (
+                  <p className="text-white/60 text-center py-8">No incoming trade requests.</p>
+                )}
+                {selectedTradeView === 'sent' && trades.sent.length === 0 && (
+                  <p className="text-white/60 text-center py-8">No pending trade offers.</p>
+                )}
+                {selectedTradeView === 'history' && trades.history.length === 0 && (
+                  <p className="text-white/60 text-center py-8">No trade history yet.</p>
+                )}
+
+                <div className="space-y-3">
+                  {(selectedTradeView === 'pending' ? trades.pending :
+                    selectedTradeView === 'sent' ? trades.sent : trades.history).map(trade => (
+                    <div key={trade.id} className="bg-black/20 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
+                            {(selectedTradeView === 'pending' ? trade.fromUser : trade.toUser)?.profilePicture ? (
+                              <img src={(selectedTradeView === 'pending' ? trade.fromUser : trade.toUser)?.profilePicture} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span dangerouslySetInnerHTML={{ __html: '&#128100;' }} />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold">
+                              {selectedTradeView === 'pending' ? trade.fromUser?.displayName : trade.toUser?.displayName}
+                            </p>
+                            <p className="text-xs text-white/60">
+                              {selectedTradeView === 'history' && <span className={trade.status === 'accepted' ? 'text-green-400' : 'text-red-400'}>{trade.status}</span>}
+                            </p>
+                          </div>
+                        </div>
+                        {selectedTradeView === 'pending' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleAcceptTrade(trade.id)}
+                              className="px-3 py-1 bg-green-500 hover:bg-green-400 rounded text-sm font-bold"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleRejectTrade(trade.id)}
+                              className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-sm"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                        {selectedTradeView === 'sent' && (
+                          <button
+                            onClick={() => handleCancelTrade(trade.id)}
+                            className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-sm"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-white/60 mb-1">They offer:</p>
+                          <div className="space-y-1">
+                            {trade.offerCards.map((card, i) => (
+                              <div key={i} className="bg-black/30 px-2 py-1 rounded">
+                                {getCardById(card.cardId)?.name || card.cardId} x{card.quantity}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-white/60 mb-1">They want:</p>
+                          <div className="space-y-1">
+                            {trade.requestCards.map((card, i) => (
+                              <div key={i} className="bg-black/30 px-2 py-1 rounded">
+                                {getCardById(card.cardId)?.name || card.cardId} x{card.quantity}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Start new trade */}
+              <div className="bg-white/5 rounded-xl p-4">
+                <h3 className="font-bold mb-3">Start a Trade</h3>
+                {friends.length === 0 ? (
+                  <p className="text-white/60 text-center py-8">Add friends to start trading!</p>
+                ) : (
+                  <div className="space-y-2">
+                    {friends.map(friend => (
+                      <div key={friend.id} className="flex items-center justify-between bg-black/20 rounded-lg p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden">
+                            {friend.profilePicture ? (
+                              <img src={friend.profilePicture} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span dangerouslySetInnerHTML={{ __html: '&#128100;' }} />
+                            )}
+                          </div>
+                          <span className="font-bold">{friend.displayName}</span>
+                        </div>
+                        <button
+                          onClick={() => openTradeWith(friend)}
+                          className="px-4 py-2 bg-blue-500 hover:bg-blue-400 rounded-lg font-bold"
+                        >
+                          Trade
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Trade modal - simplified for now */}
+              {showTradeModal && tradeTarget && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                  <div className="bg-gray-800 rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+                    <h3 className="text-xl font-bold mb-4">Trade with {tradeTarget.displayName}</h3>
+                    <p className="text-white/60 mb-4 text-sm">
+                      Trading feature coming soon! You'll be able to select cards to offer and request.
+                    </p>
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        onClick={() => setShowTradeModal(false)}
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg"
+                      >
+                        Close
+                      </button>
+                      <button
+                        onClick={handleCreateTrade}
+                        disabled={tradeOffer.length === 0 && tradeRequest.length === 0}
+                        className="px-4 py-2 bg-green-500 hover:bg-green-400 rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Propose Trade
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
