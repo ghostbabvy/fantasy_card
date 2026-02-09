@@ -133,6 +133,21 @@ export default function Card({
         {/* Bottom: Name banner */}
         <div className="bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1">
           <div className={`font-bold text-white leading-tight flex items-center justify-center gap-1 ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
+            {/* Rarity badge */}
+            <span
+              className={`px-1 py-0.5 rounded text-[7px] font-bold ${
+                card.rarity === 'celestial' ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 text-white' :
+                card.rarity === 'legendary' ? 'bg-amber-500 text-black' :
+                card.rarity === 'mythical' ? 'bg-purple-500 text-white' :
+                card.rarity === 'uncommon' ? 'bg-green-500 text-white' :
+                'bg-gray-500 text-white'
+              }`}
+            >
+              {card.rarity === 'basic' ? 'B' :
+               card.rarity === 'uncommon' ? 'U' :
+               card.rarity === 'mythical' ? 'M' :
+               card.rarity === 'legendary' ? 'L' : 'C'}
+            </span>
             {onFavoriteToggle ? (
               <button
                 onClick={(e) => {
@@ -231,21 +246,6 @@ export default function Card({
         />
       )}
 
-      {/* Rarity indicator badge */}
-      <div
-        className={`absolute bottom-12 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
-          card.rarity === 'celestial' ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 text-white animate-pulse' :
-          card.rarity === 'legendary' ? 'bg-amber-500/90 text-black' :
-          card.rarity === 'mythical' ? 'bg-purple-500/90 text-white' :
-          card.rarity === 'uncommon' ? 'bg-green-500/90 text-white' :
-          'bg-gray-500/90 text-white'
-        }`}
-      >
-        {card.rarity === 'basic' ? 'B' :
-         card.rarity === 'uncommon' ? 'U' :
-         card.rarity === 'mythical' ? 'M' :
-         card.rarity === 'legendary' ? 'L' : 'C'}
-      </div>
     </motion.div>
   )
 }
