@@ -3,6 +3,7 @@ import { cards, getCardById } from '../data/cards'
 import { BattleCard, Card, elementAdvantages, StatusEffect, Rarity, AttackTarget } from '../types'
 import { ChallengeLevel, AIBehavior } from '../data/challengeLevels'
 import { useGameStore } from './gameStore'
+import { getCorruptionBattleEffects } from '../data/cardSystems'
 
 // New player structure with active card and bench
 interface BattlePlayer {
@@ -100,6 +101,17 @@ function createBattleCard(card: Card, isPlayerCard: boolean = false, hpBonus: nu
   // Default player bonus is +20 HP if not specified
   const finalHpBonus = isPlayerCard && hpBonus === 0 ? 20 : hpBonus
 
+  // Carry condition/corruption from collection for player cards
+  let condition: number | undefined
+  let corruption: number | undefined
+  if (isPlayerCard) {
+    const owned = useGameStore.getState().collection[card.id]
+    if (owned) {
+      condition = owned.condition ?? 100
+      corruption = owned.corruption ?? 0
+    }
+  }
+
   return {
     ...card,
     instanceId: `${card.id}_${Date.now()}_${Math.random()}`,
@@ -108,7 +120,9 @@ function createBattleCard(card: Card, isPlayerCard: boolean = false, hpBonus: nu
     currentAttack: attackPower,
     canAttack: false,
     hasAttackedThisTurn: false,
-    statusEffects: []
+    statusEffects: [],
+    condition,
+    corruption
   }
 }
 
@@ -351,6 +365,12 @@ function calculateDamage(attacker: BattleCard, defender: BattleCard, attackDamag
 
   // Apply weaken effect if attacker is weakened
   damage = Math.floor(damage * getWeakenModifier(attacker))
+
+  // Corruption bonus damage (player cards only)
+  if (!isAIAttacking && attacker.corruption && attacker.corruption > 10) {
+    const effects = getCorruptionBattleEffects(attacker.corruption)
+    damage = Math.floor(damage * (1 + effects.bonusDamagePercent / 100))
+  }
 
   // Element advantage bonus (50% more damage) - SUPER EFFECTIVE!
   if (elementAdvantages[attacker.element] === defender.element) {
@@ -807,6 +827,22 @@ export const useBattleStore = create<BattleState>((set, get) => ({
 
       newLog.push(`${attacker.name} used ${attackData.name} for ${damage} damage!`)
       defender.currentHp -= damage
+
+      // Corruption side effects (self-damage and chaos)
+      if (attacker.corruption && attacker.corruption > 10) {
+        const corrEffects = getCorruptionBattleEffects(attacker.corruption)
+        if (Math.random() < corrEffects.selfDamageChance) {
+          const selfDmg = Math.max(1, Math.floor(damage * 0.1))
+          attacker.currentHp -= selfDmg
+          newLog.push(`Dark energy surges through ${attacker.name}! (-${selfDmg} HP)`)
+        }
+        if (Math.random() < corrEffects.randomTargetChance && newEnemy.bench.length > 0) {
+          const randomBench = newEnemy.bench[Math.floor(Math.random() * newEnemy.bench.length)]
+          const splashDmg = Math.max(1, Math.floor(damage * 0.3))
+          randomBench.currentHp -= splashDmg
+          newLog.push(`Corruption lashes out at ${randomBench.name}! (-${splashDmg} HP)`)
+        }
+      }
 
       // Handle attack effects on enemy
       const attackEffect = attackData.effect?.toLowerCase() || ''

@@ -4,6 +4,18 @@ import { cards, getCardById } from '../data/cards'
 import { Deck, Rarity, AchievementTier } from '../types'
 import { achievements as achievementDefinitions } from '../data/achievements'
 import { leaderboardApi, authApi } from '../services/api'
+import {
+  degradeCondition,
+  getConditionTier,
+  getRestorationCost,
+  getRestoredCondition,
+  getPurificationCost,
+  getPurifiedCorruption,
+  canEmbraceVoid,
+  getCorruptionSpreadRate,
+  calculateAdjustedSellValue,
+  calculateAdjustedDustValue
+} from '../data/cardSystems'
 
 // Card variant types (for chase/collectibility)
 export type CardVariant = 'normal' | 'holo' | 'fullart' | 'secret'
@@ -12,6 +24,10 @@ export interface OwnedCard {
   quantity: number
   variants: Record<CardVariant, number>
   isNew?: boolean
+  condition: number            // 0-100, starts at 100 (Mint)
+  acquiredAt: number           // Timestamp when first acquired
+  corruption: number           // 0-100, starts at 0 (Pure)
+  isVoidTransformed?: boolean  // Whether card has been "embraced" at Void corruption
 }
 
 export interface Mission {
@@ -161,6 +177,12 @@ interface GameState {
   trackCardUsage: (cardId: string) => void
   recordBattleResult: (won: boolean) => void
 
+  // Card condition, aging, corruption
+  restoreCardCondition: (cardId: string) => boolean
+  purifyCard: (cardId: string) => boolean
+  embraceVoid: (cardId: string) => boolean
+  processBattleEnd: (deckCardIds: string[], won: boolean) => void
+
   // Card Backs
   purchaseCardBack: (cardBackId: string) => boolean
   setSelectedCardBack: (cardBackId: string) => void
@@ -270,22 +292,6 @@ function getRandomCardOfRarity(rarity: Rarity): string {
   return cardsOfRarity[Math.floor(Math.random() * cardsOfRarity.length)].id
 }
 
-// Generate starter collection
-function getStarterCollection(): Record<string, OwnedCard> {
-  const collection: Record<string, OwnedCard> = {}
-  const basicCards = cards.filter(c => c.rarity === 'basic')
-
-  basicCards.forEach(card => {
-    collection[card.id] = {
-      quantity: 2,
-      variants: { normal: 2, holo: 0, fullart: 0, secret: 0 },
-      isNew: false
-    }
-  })
-
-  return collection
-}
-
 // Generate daily missions
 function generateDailyMissions(): Mission[] {
   return [
@@ -393,7 +399,7 @@ function getTodayDateString(): string {
 }
 
 // Version for Zustand persist migrations
-const CURRENT_VERSION = 5
+const CURRENT_VERSION = 6
 
 export const useGameStore = create<GameState>()(
   persist(
@@ -405,7 +411,7 @@ export const useGameStore = create<GameState>()(
       xp: 0,
       coins: 500,
       dust: 0,
-      collection: getStarterCollection(),
+      collection: {},
       decks: [],
       pityCounter: 0,
       freePackTimer: Date.now(),
@@ -496,7 +502,10 @@ export const useGameStore = create<GameState>()(
           const existing = state.collection[cardId] || {
             quantity: 0,
             variants: { normal: 0, holo: 0, fullart: 0, secret: 0 },
-            isNew: true
+            isNew: true,
+            condition: 100,
+            acquiredAt: Date.now(),
+            corruption: 0
           }
           return {
             collection: {
@@ -608,14 +617,20 @@ export const useGameStore = create<GameState>()(
             currentCard = {
               quantity: 0,
               variants: { normal: 0, holo: 0, fullart: 0, secret: 0 },
-              isNew: true
+              isNew: true,
+              condition: 100,
+              acquiredAt: Date.now(),
+              corruption: 0
             }
           } else if (typeof existing === 'number') {
             // Old format - migrate it
             currentCard = {
               quantity: existing,
               variants: { normal: existing, holo: 0, fullart: 0, secret: 0 },
-              isNew: false
+              isNew: false,
+              condition: 100,
+              acquiredAt: Date.now(),
+              corruption: 0
             }
           } else {
             currentCard = existing
@@ -690,7 +705,10 @@ export const useGameStore = create<GameState>()(
           const existing = newCollection[cardId] || {
             quantity: 0,
             variants: { normal: 0, holo: 0, fullart: 0, secret: 0 },
-            isNew: true
+            isNew: true,
+            condition: 100,
+            acquiredAt: Date.now(),
+            corruption: 0
           }
           newCollection[cardId] = {
             ...existing,
@@ -752,7 +770,10 @@ export const useGameStore = create<GameState>()(
         const existing = state.collection[cardId] || {
           quantity: 0,
           variants: { normal: 0, holo: 0, fullart: 0, secret: 0 },
-          isNew: true
+          isNew: true,
+          condition: 100,
+          acquiredAt: Date.now(),
+          corruption: 0
         }
 
         set({
@@ -779,7 +800,11 @@ export const useGameStore = create<GameState>()(
         const current = state.collection[cardId]
         if (!current || current.quantity < 1) return 0
 
-        const dustGain = dustValues[card.rarity].disenchant
+        const dustGain = calculateAdjustedDustValue(
+          dustValues[card.rarity].disenchant,
+          current.condition ?? 100,
+          current.acquiredAt ?? Date.now()
+        )
 
         // Remove from the most common variant first
         const variants = { ...current.variants }
@@ -813,7 +838,11 @@ export const useGameStore = create<GameState>()(
         const current = state.collection[cardId]
         if (!current || current.quantity < 1) return 0
 
-        const coinGain = sellValues[card.rarity]
+        const coinGain = calculateAdjustedSellValue(
+          sellValues[card.rarity],
+          current.condition ?? 100,
+          current.acquiredAt ?? Date.now()
+        )
 
         // Remove from the most common variant first
         const variants = { ...current.variants }
@@ -1067,11 +1096,25 @@ export const useGameStore = create<GameState>()(
         return get().favoriteCards.includes(cardId)
       },
 
-      // Track card usage in battle
+      // Track card usage in battle (also degrades condition)
       trackCardUsage: (cardId) => {
         const state = get()
         const currentCount = state.stats.cardUsageCount[cardId] || 0
+        const owned = state.collection[cardId]
+        const card = getCardById(cardId)
+
+        // Degrade condition when card is used in battle
+        let newCollection = state.collection
+        if (owned && card) {
+          const newCondition = degradeCondition(owned.condition ?? 100, card.rarity, 1)
+          newCollection = {
+            ...state.collection,
+            [cardId]: { ...owned, condition: newCondition }
+          }
+        }
+
         set({
+          collection: newCollection,
           stats: {
             ...state.stats,
             cardUsageCount: {
@@ -1103,6 +1146,118 @@ export const useGameStore = create<GameState>()(
             }
           })
         }
+      },
+
+      // Card condition restoration (spend dust to restore up to 25 points, max 90)
+      restoreCardCondition: (cardId) => {
+        const state = get()
+        const owned = state.collection[cardId]
+        const card = getCardById(cardId)
+        if (!owned || !card) return false
+        if ((owned.condition ?? 100) >= 90) return false
+
+        const cost = getRestorationCost(owned.condition ?? 100, card.rarity)
+        if (state.dust < cost) return false
+
+        const newCondition = getRestoredCondition(owned.condition ?? 100)
+        set({
+          dust: state.dust - cost,
+          collection: {
+            ...state.collection,
+            [cardId]: { ...owned, condition: newCondition }
+          }
+        })
+        return true
+      },
+
+      // Purify corruption (spend dust to reduce corruption by 20)
+      purifyCard: (cardId) => {
+        const state = get()
+        const owned = state.collection[cardId]
+        const card = getCardById(cardId)
+        if (!owned || !card) return false
+        if ((owned.corruption ?? 0) <= 0) return false
+
+        const cost = getPurificationCost(owned.corruption ?? 0, card.rarity)
+        if (state.dust < cost) return false
+
+        const newCorruption = getPurifiedCorruption(owned.corruption ?? 0)
+        set({
+          dust: state.dust - cost,
+          collection: {
+            ...state.collection,
+            [cardId]: { ...owned, corruption: newCorruption }
+          }
+        })
+        return true
+      },
+
+      // Embrace the Void — permanent dark transformation at high corruption
+      embraceVoid: (cardId) => {
+        const state = get()
+        const owned = state.collection[cardId]
+        if (!owned) return false
+        if (!canEmbraceVoid(owned.corruption ?? 0)) return false
+        if (owned.isVoidTransformed) return false
+
+        set({
+          collection: {
+            ...state.collection,
+            [cardId]: { ...owned, isVoidTransformed: true }
+          }
+        })
+        return true
+      },
+
+      // Process end of battle: corruption from losses, poor condition corruption, corruption spread
+      processBattleEnd: (deckCardIds, won) => {
+        const state = get()
+        const newCollection = { ...state.collection }
+
+        // Corruption from losing (15% chance per card to gain 2-5 corruption)
+        if (!won) {
+          deckCardIds.forEach(cardId => {
+            const owned = newCollection[cardId]
+            if (owned && Math.random() < 0.15) {
+              const corruptionGain = 2 + Math.floor(Math.random() * 4)
+              newCollection[cardId] = {
+                ...owned,
+                corruption: Math.min(100, (owned.corruption ?? 0) + corruptionGain)
+              }
+            }
+          })
+        }
+
+        // Poor condition cards always gain +1 corruption per battle
+        deckCardIds.forEach(cardId => {
+          const owned = newCollection[cardId]
+          if (owned && getConditionTier(owned.condition ?? 100) === 'poor') {
+            newCollection[cardId] = {
+              ...owned,
+              corruption: Math.min(100, (owned.corruption ?? 0) + 1)
+            }
+          }
+        })
+
+        // Corruption spread if deck average is high
+        const avgCorruption = deckCardIds.reduce((sum, id) => {
+          return sum + (newCollection[id]?.corruption ?? 0)
+        }, 0) / Math.max(1, deckCardIds.length)
+
+        const spreadRate = getCorruptionSpreadRate(avgCorruption)
+        if (spreadRate > 0) {
+          deckCardIds.forEach(cardId => {
+            const owned = newCollection[cardId]
+            if (owned && (owned.corruption ?? 0) < avgCorruption) {
+              newCollection[cardId] = {
+                ...owned,
+                corruption: Math.min(100, (owned.corruption ?? 0) + spreadRate)
+              }
+            }
+          })
+        }
+
+        set({ collection: newCollection })
       },
 
       // Achievement progress calculation
@@ -1301,14 +1456,17 @@ export const useGameStore = create<GameState>()(
               newCollection[cardId] = {
                 quantity: value,
                 variants: { normal: value, holo: 0, fullart: 0, secret: 0 },
-                isNew: false
+                isNew: false,
+                condition: 100,
+                acquiredAt: Date.now() - (30 * 24 * 60 * 60 * 1000),
+                corruption: 0
               }
             } else if (value && typeof value === 'object' && 'quantity' in value) {
               newCollection[cardId] = value as OwnedCard
             }
           }
 
-          state.collection = Object.keys(newCollection).length > 0 ? newCollection : getStarterCollection()
+          state.collection = newCollection
         }
 
         // Ensure all fields exist with defaults
@@ -1352,6 +1510,18 @@ export const useGameStore = create<GameState>()(
           selectedArena: state.selectedArena || 'default',
           playerBio: state.playerBio || '',
           profilePicture: state.profilePicture || ''
+        }
+
+        // Migrate to version 6: Add condition, aging, corruption to all cards
+        if (state.collection) {
+          for (const cardId of Object.keys(state.collection)) {
+            const owned = state.collection[cardId]
+            if (owned && typeof owned === 'object') {
+              if (owned.condition === undefined) owned.condition = 100
+              if (owned.acquiredAt === undefined) owned.acquiredAt = Date.now() - (30 * 24 * 60 * 60 * 1000)
+              if (owned.corruption === undefined) owned.corruption = 0
+            }
+          }
         }
 
         return state

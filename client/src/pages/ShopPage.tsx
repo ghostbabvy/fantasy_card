@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore, CardVariant } from '../stores/gameStore'
 import PackOpening from '../components/PackOpening'
 import { cards as allCards } from '../data/cards'
+import { calculateAdjustedSellValue } from '../data/cardSystems'
 import { sellValues, Rarity } from '../types'
 import Card from '../components/Card'
 
@@ -312,6 +313,7 @@ export default function ShopPage() {
               </div>
             ))}
           </div>
+          <div className="text-xs text-white/40 mt-2">Values shown for Mint condition. Wear reduces value.</div>
         </div>
 
         <AnimatePresence>
@@ -330,8 +332,10 @@ export default function ShopPage() {
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto p-2">
                   {ownedCards.map(card => {
-                    const quantity = collection[card.id]?.quantity || 0
+                    const owned = collection[card.id]
+                    const quantity = owned?.quantity || 0
                     const isSelling = sellAnimation === card.id
+                    const adjustedPrice = calculateAdjustedSellValue(sellValues[card.rarity], owned?.condition ?? 100, owned?.acquiredAt ?? Date.now())
 
                     return (
                       <motion.div
@@ -339,7 +343,7 @@ export default function ShopPage() {
                         animate={isSelling ? { scale: [1, 0.8, 1], opacity: [1, 0.5, 1] } : {}}
                         className="relative group"
                       >
-                        <Card card={card} size="sm" />
+                        <Card card={card} size="sm" condition={owned?.condition} corruption={owned?.corruption} />
                         <div className="absolute top-1 right-1 bg-black/80 rounded-full px-2 py-0.5 text-xs font-bold">
                           x{quantity}
                         </div>
@@ -349,7 +353,7 @@ export default function ShopPage() {
                           onClick={() => handleSellCard(card.id)}
                           className="absolute bottom-1 left-1/2 -translate-x-1/2 px-2 py-1 bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          🪙 {sellValues[card.rarity]}
+                          🪙 {adjustedPrice}
                         </motion.button>
                       </motion.div>
                     )

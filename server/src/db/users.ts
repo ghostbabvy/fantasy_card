@@ -4,10 +4,23 @@ import pg from 'pg'
 const { Pool } = pg
 
 // Database connection
+let dbAvailable = false
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 5000
 })
+
+// Prevent unhandled pool errors from crashing the process
+pool.on('error', (err) => {
+  console.error('PostgreSQL pool error:', err.message)
+  dbAvailable = false
+})
+
+export function isDatabaseAvailable(): boolean {
+  return dbAvailable
+}
 
 export interface User {
   id: string
@@ -215,9 +228,12 @@ export async function initUsersDb() {
       )
     `)
 
+    dbAvailable = true
     console.log('✅ Database tables initialized')
   } catch (error) {
-    console.error('Failed to initialize database:', error)
+    dbAvailable = false
+    console.error('⚠️ Database not available:', (error as Error).message)
+    console.error('Server will continue without database features')
   }
 }
 

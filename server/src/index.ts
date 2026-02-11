@@ -18,10 +18,6 @@ const PORT = process.env.PORT || 3001
 app.use(cors())
 app.use(express.json({ limit: '2mb' })) // Increased limit for profile pictures
 
-// Initialize databases
-initDatabase()
-initUsersDb()
-
 // Routes
 app.use('/api/player', playerRoutes)
 app.use('/api/shop', shopRoutes)
@@ -37,6 +33,19 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-app.listen(PORT, () => {
-  console.log(`🎮 Fantasy Cards server running on port ${PORT}`)
-})
+// Initialize databases then start server
+async function start() {
+  initDatabase()
+
+  try {
+    await initUsersDb()
+  } catch (err) {
+    console.error('Database init failed, continuing without DB:', (err as Error).message)
+  }
+
+  app.listen(PORT, () => {
+    console.log(`🎮 Fantasy Cards server running on port ${PORT}`)
+  })
+}
+
+start()

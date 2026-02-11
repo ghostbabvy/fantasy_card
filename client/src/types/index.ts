@@ -53,6 +53,8 @@ export interface BattleCard extends Card {
   canAttack: boolean
   hasAttackedThisTurn: boolean
   statusEffects: StatusEffect[]
+  condition?: number    // 0-100, carried from collection for visuals & corruption effects
+  corruption?: number   // 0-100, carried from collection for battle effects
 }
 
 export interface Player {
@@ -128,6 +130,40 @@ export const sellValues: Record<Rarity, number> = {
   legendary: 200,
   celestial: 500
 }
+
+// Card Condition System
+export type ConditionTier = 'mint' | 'near-mint' | 'excellent' | 'good' | 'played' | 'poor'
+
+export const conditionMultipliers: Record<ConditionTier, number> = {
+  'mint': 1.0,
+  'near-mint': 0.85,
+  'excellent': 0.65,
+  'good': 0.45,
+  'played': 0.25,
+  'poor': 0.10
+}
+
+// How much condition degrades per battle use (percentage points) - higher rarity = slower wear
+export const rarityDegradation: Record<Rarity, number> = {
+  basic: 1.5,
+  uncommon: 1.2,
+  mythical: 0.8,
+  legendary: 0.5,
+  celestial: 0.3
+}
+
+// Card Aging System
+export type AgeTier = 'fresh' | 'settled' | 'vintage' | 'ancient'
+
+export const ageValueMultipliers: Record<AgeTier, number> = {
+  'fresh': 1.0,
+  'settled': 1.1,
+  'vintage': 1.3,
+  'ancient': 1.5
+}
+
+// Card Corruption System
+export type CorruptionTier = 'pure' | 'tainted' | 'corrupted' | 'void'
 
 // Achievement types
 export type AchievementTier = 'bronze' | 'silver' | 'gold'

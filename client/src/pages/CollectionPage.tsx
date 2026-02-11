@@ -8,7 +8,7 @@ import { Element, Rarity, Card as CardType, elementColors } from '../types'
 import { ElementIcon } from '../components/ElementIcon'
 
 export default function CollectionPage() {
-  const { collection, markCardSeen, favoriteCards, toggleFavorite, stats } = useGameStore()
+  const { collection, markCardSeen, favoriteCards, toggleFavorite, stats, restoreCardCondition, purifyCard, embraceVoid, dust } = useGameStore()
   const [elementFilter, setElementFilter] = useState<Element | 'all'>('all')
   const [rarityFilter, setRarityFilter] = useState<Rarity | 'all'>('all')
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
@@ -185,6 +185,10 @@ export default function CollectionPage() {
                   isFavorite={favoriteCards.includes(card.id)}
                   onFavoriteToggle={quantity > 0 ? () => toggleFavorite(card.id) : undefined}
                   masteryXp={stats.cardUsageCount[card.id] || 0}
+                  condition={owned?.condition}
+                  corruption={owned?.corruption}
+                  acquiredAt={owned?.acquiredAt}
+                  isVoidTransformed={owned?.isVoidTransformed}
                 />
 
                 {/* Quantity Badge */}
@@ -247,6 +251,14 @@ export default function CollectionPage() {
           card={selectedCard}
           quantity={collection[selectedCard.id]?.quantity || 0}
           onClose={() => setSelectedCard(null)}
+          condition={collection[selectedCard.id]?.condition}
+          corruption={collection[selectedCard.id]?.corruption}
+          acquiredAt={collection[selectedCard.id]?.acquiredAt}
+          isVoidTransformed={collection[selectedCard.id]?.isVoidTransformed}
+          dust={dust}
+          onRestore={() => restoreCardCondition(selectedCard.id)}
+          onPurify={() => purifyCard(selectedCard.id)}
+          onEmbraceVoid={() => embraceVoid(selectedCard.id)}
         />
       )}
     </div>

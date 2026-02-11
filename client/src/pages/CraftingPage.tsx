@@ -4,9 +4,10 @@ import { useGameStore } from '../stores/gameStore'
 import { cards } from '../data/cards'
 import Card from '../components/Card'
 import { Element, Rarity, Card as CardType, dustValues, rarityColors, sellValues } from '../types'
+import { calculateAdjustedSellValue, calculateAdjustedDustValue, getRestorationCost, getPurificationCost } from '../data/cardSystems'
 
 export default function CraftingPage() {
-  const { collection, dust, coins, craftCard, disenchantCard, sellCard } = useGameStore()
+  const { collection, dust, coins, craftCard, disenchantCard, sellCard, restoreCardCondition, purifyCard } = useGameStore()
   const [elementFilter, setElementFilter] = useState<Element | 'all'>('all')
   const [rarityFilter, setRarityFilter] = useState<Rarity | 'all'>('all')
   const [showOwned, setShowOwned] = useState<'all' | 'owned' | 'missing'>('all')
@@ -81,13 +82,22 @@ export default function CraftingPage() {
     const owned = collection[selectedCard.id]
     const quantity = owned?.quantity || 0
     const craftCost = dustValues[selectedCard.rarity].craft
-    const disenchantValue = dustValues[selectedCard.rarity].disenchant
-    const sellValue = sellValues[selectedCard.rarity]
+    const condition = owned?.condition ?? 100
+    const corruption = owned?.corruption ?? 0
+    const acquiredAt = owned?.acquiredAt ?? Date.now()
+    const disenchantValue = calculateAdjustedDustValue(dustValues[selectedCard.rarity].disenchant, condition, acquiredAt)
+    const sellValue = calculateAdjustedSellValue(sellValues[selectedCard.rarity], condition, acquiredAt)
     const canCraft = dust >= craftCost
     const canDisenchant = quantity > 0
     const canSell = quantity > 0
+    const needsRestore = quantity > 0 && condition < 90
+    const needsPurify = quantity > 0 && corruption > 0
+    const restoreCost = needsRestore ? getRestorationCost(condition, selectedCard.rarity) : 0
+    const purifyCost = needsPurify ? getPurificationCost(corruption, selectedCard.rarity) : 0
+    const canRestore = needsRestore && dust >= restoreCost
+    const canPurify = needsPurify && dust >= purifyCost
 
-    return { quantity, craftCost, disenchantValue, sellValue, canCraft, canDisenchant, canSell }
+    return { quantity, craftCost, disenchantValue, sellValue, canCraft, canDisenchant, canSell, needsRestore, needsPurify, restoreCost, purifyCost, canRestore, canPurify, condition, corruption }
   }
 
   const info = getSelectedCardInfo()
@@ -213,6 +223,9 @@ export default function CraftingPage() {
                 <Card
                   card={card}
                   onClick={() => setSelectedCard(card)}
+                  condition={collection[card.id]?.condition}
+                  corruption={collection[card.id]?.corruption}
+                  acquiredAt={collection[card.id]?.acquiredAt}
                 />
               </div>
 
@@ -297,6 +310,44 @@ export default function CraftingPage() {
                     </>
                   )}
                 </motion.button>
+
+                {/* Restore Condition */}
+                {info.needsRestore && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    disabled={!info.canRestore}
+                    onClick={() => selectedCard && restoreCardCondition(selectedCard.id)}
+                    className={`px-5 py-3 rounded-xl font-bold flex items-center gap-2 ${
+                      info.canRestore
+                        ? 'bg-emerald-500 hover:bg-emerald-600'
+                        : 'bg-gray-600 cursor-not-allowed opacity-50'
+                    }`}
+                  >
+                    <span>🔧</span>
+                    Restore
+                    <span className="text-emerald-200">-{info.restoreCost}✨</span>
+                  </motion.button>
+                )}
+
+                {/* Purify Corruption */}
+                {info.needsPurify && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    disabled={!info.canPurify}
+                    onClick={() => selectedCard && purifyCard(selectedCard.id)}
+                    className={`px-5 py-3 rounded-xl font-bold flex items-center gap-2 ${
+                      info.canPurify
+                        ? 'bg-violet-500 hover:bg-violet-600'
+                        : 'bg-gray-600 cursor-not-allowed opacity-50'
+                    }`}
+                  >
+                    <span>🌟</span>
+                    Purify
+                    <span className="text-violet-200">-{info.purifyCost}✨</span>
+                  </motion.button>
+                )}
 
                 {/* Disenchant for Dust */}
                 <motion.button

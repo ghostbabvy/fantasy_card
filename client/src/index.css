@@ -94,6 +94,129 @@ h1, h2, h3, h4, h5, h6 {
 .element-shadow { background: linear-gradient(135deg, #581c87 0%, #9333ea 100%); }
 .element-light { background: linear-gradient(135deg, #f59e0b 0%, #fef3c7 100%); }
 
+/* === Card Condition Effects === */
+
+/* Mint holographic shine - sweeping diagonal highlight */
+.card-mint-shine {
+  background: linear-gradient(
+    135deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.1) 35%,
+    transparent 50%
+  );
+  background-size: 300% 300%;
+  animation: mint-shine-sweep 4s ease-in-out infinite;
+}
+
+@keyframes mint-shine-sweep {
+  0% { background-position: 100% 100%; }
+  50% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+/* Near Mint - subtler, slower shine */
+.card-near-mint-shine {
+  background: linear-gradient(
+    135deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.05) 45%,
+    transparent 60%
+  );
+  background-size: 300% 300%;
+  animation: mint-shine-sweep 6s ease-in-out infinite;
+}
+
+/* Light scratches (Good condition) */
+.card-scratches-light {
+  background-image:
+    linear-gradient(45deg, transparent 48%, rgba(255,255,255,0.04) 49%, rgba(255,255,255,0.04) 51%, transparent 52%),
+    linear-gradient(-30deg, transparent 48%, rgba(255,255,255,0.03) 49%, rgba(255,255,255,0.03) 51%, transparent 52%);
+  background-size: 30px 30px, 20px 20px;
+}
+
+/* Heavy scratches (Played condition) */
+.card-scratches-heavy {
+  background-image:
+    linear-gradient(45deg, transparent 46%, rgba(255,255,255,0.07) 47%, rgba(255,255,255,0.07) 53%, transparent 54%),
+    linear-gradient(-30deg, transparent 46%, rgba(255,255,255,0.06) 47%, rgba(255,255,255,0.06) 53%, transparent 54%),
+    linear-gradient(10deg, transparent 48%, rgba(255,255,255,0.04) 49%, rgba(255,255,255,0.04) 51%, transparent 52%);
+  background-size: 25px 25px, 18px 18px, 40px 40px;
+}
+
+/* Edge wear - darkened edges */
+.card-edge-wear {
+  box-shadow: inset 0 0 8px 2px rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+}
+
+/* Bent corner (Poor condition) */
+.card-bent-corner {
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(225deg, rgba(120, 120, 120, 0.6) 50%, transparent 50%);
+}
+
+/* === Card Corruption Effects === */
+
+/* Tainted - subtle purple aura */
+.card-corruption-tainted {
+  animation: corruption-pulse-tainted 3s ease-in-out infinite;
+}
+
+@keyframes corruption-pulse-tainted {
+  0%, 100% { box-shadow: inset 0 0 10px rgba(139, 92, 246, 0.15); }
+  50% { box-shadow: inset 0 0 18px rgba(139, 92, 246, 0.3); }
+}
+
+/* Corrupted - heavier purple with hue shift */
+.card-corruption-corrupted {
+  animation: corruption-pulse-corrupted 2s ease-in-out infinite;
+}
+
+@keyframes corruption-pulse-corrupted {
+  0%, 100% {
+    box-shadow: inset 0 0 15px rgba(124, 58, 237, 0.35);
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    box-shadow: inset 0 0 28px rgba(124, 58, 237, 0.55);
+    filter: hue-rotate(5deg);
+  }
+}
+
+/* Void - intense dark purple with glitch */
+.card-corruption-void {
+  animation: corruption-void 1.5s ease-in-out infinite, corruption-glitch 5s step-end infinite;
+}
+
+@keyframes corruption-void {
+  0%, 100% {
+    box-shadow: inset 0 0 20px rgba(59, 7, 100, 0.6), inset 0 0 40px rgba(124, 58, 237, 0.25);
+  }
+  50% {
+    box-shadow: inset 0 0 30px rgba(59, 7, 100, 0.8), inset 0 0 50px rgba(124, 58, 237, 0.35);
+  }
+}
+
+@keyframes corruption-glitch {
+  0%, 94%, 100% { transform: none; }
+  95% { transform: translateX(2px) skewX(1deg); }
+  96% { transform: translateX(-2px) skewY(1deg); }
+  97% { transform: translateX(1px); }
+}
+
+/* Void transformation border */
+.card-void-border {
+  border: 2px solid #3b0764;
+  border-radius: 12px;
+  animation: void-border-pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes void-border-pulse {
+  0% { border-color: #3b0764; box-shadow: 0 0 8px #7c3aed; }
+  100% { border-color: #7c3aed; box-shadow: 0 0 16px #3b0764; }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

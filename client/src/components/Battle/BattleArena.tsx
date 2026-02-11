@@ -98,7 +98,7 @@ export default function BattleArena() {
     cancelBenchTarget
   } = useBattleStore()
 
-  const { addCoins, addXp, updateMissionProgress, incrementStat, recordBattleResult } = useGameStore()
+  const { addCoins, addXp, updateMissionProgress, incrementStat, recordBattleResult, processBattleEnd } = useGameStore()
 
   // Coin flip animation state
   const [coinFlipping, setCoinFlipping] = useState(true)
@@ -128,6 +128,15 @@ export default function BattleArena() {
       return
     }
 
+    // Collect all card IDs that were in this battle's deck
+    const deckCardIds = [
+      ...player.deck,
+      ...player.hand.map(c => c.id),
+      ...(player.active ? [player.active.id] : []),
+      ...player.bench.map(c => c.id),
+      ...player.graveyard
+    ]
+
     // Regular battle rewards
     if (winner === 'player') {
       addCoins(50)
@@ -140,6 +149,10 @@ export default function BattleArena() {
       recordBattleResult(false)
     }
     incrementStat('battlesPlayed')
+
+    // Process condition degradation and corruption from battle
+    processBattleEnd(deckCardIds, winner === 'player')
+
     endBattle()
   }
 

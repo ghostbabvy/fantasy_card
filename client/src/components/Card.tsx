@@ -3,6 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Card as CardType, rarityColors, elementColors } from '../types'
 import { ElementIcon } from './ElementIcon'
 import MasteryBadge from './MasteryBadge'
+import {
+  getConditionTier,
+  getConditionColor,
+  getConditionAbbr,
+  getCorruptionTier,
+  getCorruptionColor,
+  getAgeTier,
+  getAgeColor
+} from '../data/cardSystems'
 
 interface CardProps {
   card: CardType
@@ -15,6 +24,10 @@ interface CardProps {
   isFavorite?: boolean
   onFavoriteToggle?: () => void
   masteryXp?: number
+  condition?: number
+  corruption?: number
+  acquiredAt?: number
+  isVoidTransformed?: boolean
 }
 
 export default function Card({
@@ -27,7 +40,11 @@ export default function Card({
   showDetailsDefault = false,
   isFavorite = false,
   onFavoriteToggle,
-  masteryXp
+  masteryXp,
+  condition,
+  corruption,
+  acquiredAt,
+  isVoidTransformed
 }: CardProps) {
   const [showDetails, setShowDetails] = useState(showDetailsDefault)
 
@@ -233,6 +250,97 @@ export default function Card({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Condition visual effects */}
+      {condition !== undefined && (
+        <>
+          {/* Mint holographic shine */}
+          {condition >= 90 && (
+            <div className="absolute inset-0 pointer-events-none card-mint-shine rounded-xl" />
+          )}
+          {/* Near Mint subtle shine */}
+          {condition >= 75 && condition < 90 && (
+            <div className="absolute inset-0 pointer-events-none card-near-mint-shine rounded-xl" />
+          )}
+          {/* Edge wear (Excellent and below) */}
+          {condition < 75 && (
+            <div className="absolute inset-0 pointer-events-none card-edge-wear" />
+          )}
+          {/* Desaturation filter for worn cards */}
+          {condition < 55 && (
+            <div
+              className="absolute inset-0 pointer-events-none rounded-xl"
+              style={{
+                backgroundColor: `rgba(0,0,0,${0.1 + (1 - condition / 55) * 0.2})`,
+                mixBlendMode: 'multiply'
+              }}
+            />
+          )}
+          {/* Scratches overlay */}
+          {condition < 55 && condition >= 15 && (
+            <div className="absolute inset-0 pointer-events-none card-scratches-light rounded-xl" />
+          )}
+          {condition < 15 && (
+            <div className="absolute inset-0 pointer-events-none card-scratches-heavy rounded-xl" />
+          )}
+          {/* Bent corner for Poor */}
+          {condition < 15 && (
+            <div className="absolute top-0 right-0 pointer-events-none card-bent-corner" />
+          )}
+        </>
+      )}
+
+      {/* Corruption visual effects */}
+      {corruption !== undefined && corruption > 10 && (
+        <div
+          className={`absolute inset-0 pointer-events-none rounded-xl ${
+            corruption > 60 ? 'card-corruption-void' :
+            corruption > 30 ? 'card-corruption-corrupted' :
+            'card-corruption-tainted'
+          }`}
+        />
+      )}
+
+      {/* Void transformation border */}
+      {isVoidTransformed && (
+        <div className="absolute inset-0 pointer-events-none card-void-border" />
+      )}
+
+      {/* Condition badge */}
+      {condition !== undefined && condition < 100 && (
+        <div
+          className="absolute top-1 right-1 px-1 py-0.5 rounded text-[7px] font-bold text-white z-10 shadow-sm"
+          style={{ backgroundColor: getConditionColor(getConditionTier(condition)) }}
+          title={`${getConditionTier(condition)} (${Math.round(condition)}%)`}
+        >
+          {getConditionAbbr(getConditionTier(condition))}
+        </div>
+      )}
+
+      {/* Age badge (only Vintage and Ancient) */}
+      {acquiredAt !== undefined && (() => {
+        const ageTier = getAgeTier(acquiredAt)
+        if (ageTier !== 'vintage' && ageTier !== 'ancient') return null
+        return (
+          <div
+            className="absolute bottom-12 right-1 px-1 py-0.5 rounded text-[7px] font-bold z-10"
+            style={{ backgroundColor: getAgeColor(ageTier) + '50', color: getAgeColor(ageTier) }}
+          >
+            {ageTier === 'vintage' ? 'VTG' : 'ANC'}
+          </div>
+        )
+      })()}
+
+      {/* Corruption badge */}
+      {corruption !== undefined && corruption > 10 && (
+        <div
+          className="absolute top-1 left-10 px-1 py-0.5 rounded text-[7px] font-bold text-white z-10 shadow-sm"
+          style={{ backgroundColor: getCorruptionColor(getCorruptionTier(corruption)) }}
+        >
+          {getCorruptionTier(corruption) === 'void' ? 'VOID' :
+           getCorruptionTier(corruption) === 'corrupted' ? 'CRP' : 'TNT'}
+        </div>
+      )}
 
       {/* Rarity glow effects */}
       {(card.rarity === 'mythical' || card.rarity === 'legendary' || card.rarity === 'celestial') && (
