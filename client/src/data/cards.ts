@@ -60,7 +60,7 @@ export const bossExclusiveCards: Card[] = [
       { name: 'Rebirth Inferno', damage: 130, cost: 4, effect: 'Heal 50 HP' }
     ],
     description: 'Reward from defeating the Flame Emperor. Death is merely a temporary setback.',
-    artwork: '/cards/boss_phoenix_lord.jpg'
+    artwork: '/cards/boss_world_serpent.jpg'
   },
   {
     id: 'boss_world_serpent',
@@ -75,7 +75,7 @@ export const bossExclusiveCards: Card[] = [
       { name: "World's End", damage: 160, cost: 5, effect: 'Stun: skip attack' }
     ],
     description: 'Reward from defeating the Final Champion. The serpent that encircles the world.',
-    artwork: '/cards/boss_world_serpent.jpg'
+    artwork: '/cards/boss_phoenix_lord.jpg'
   }
 ]
 

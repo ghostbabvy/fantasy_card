@@ -42,6 +42,9 @@ interface BattleState {
   coinFlipResult: 'player' | 'enemy' | null
   coinFlipComplete: boolean
 
+  // Setup phase: both sides place initial cards before battle begins
+  setupPhase: boolean
+
   // When active faints, player must choose replacement
   needsToChooseActive: boolean
 
@@ -98,8 +101,8 @@ function createBattleCard(card: Card, isPlayerCard: boolean = false, hpBonus: nu
     ? card.attacks[0].damage
     : 0
 
-  // Default player bonus is +20 HP if not specified
-  const finalHpBonus = isPlayerCard && hpBonus === 0 ? 20 : hpBonus
+  // Small player bonus of +5 HP if not specified
+  const finalHpBonus = isPlayerCard && hpBonus === 0 ? 5 : hpBonus
 
   // Carry condition/corruption from collection for player cards
   let condition: number | undefined
@@ -255,21 +258,21 @@ function createBattlePlayer(deckCardIds: string[], isPlayer: boolean = false): B
   const shuffledDeck = shuffleArray(cardIds)
   const hand: BattleCard[] = []
 
-  // Player draws 6 cards, AI draws 4 (gives player advantage)
-  const drawCount = isPlayer ? 6 : 4
+  // Both sides draw 5 cards
+  const drawCount = 5
   for (let i = 0; i < drawCount && shuffledDeck.length > 0; i++) {
     const cardId = shuffledDeck.shift()!
     const card = getCardById(cardId)
     if (card) {
-      hand.push(createBattleCard(card, isPlayer))  // Player cards get HP bonus
+      hand.push(createBattleCard(card, isPlayer))
     }
   }
 
   return {
     hp: 100,
     maxHp: 100,
-    energy: isPlayer ? 3 : 2,      // Player starts with 3 energy, AI with 2
-    maxEnergy: isPlayer ? 3 : 2,
+    energy: 3,
+    maxEnergy: 3,
     deck: shuffledDeck,
     hand,
     active: null,
@@ -279,27 +282,35 @@ function createBattlePlayer(deckCardIds: string[], isPlayer: boolean = false): B
 }
 
 function createAIDeck(): string[] {
-  // Create a WEAKER AI deck - mostly common/uncommon, no spells
-  // This makes the game easier like Pokemon TCG Pocket
   const aiCards: string[] = []
 
-  // Get card pools - only creatures, no spells!
   const creatures = cards.filter(c => c.type === 'creature')
   const commonCreatures = creatures.filter(c => c.rarity === 'basic')
   const uncommonCreatures = creatures.filter(c => c.rarity === 'uncommon')
+  const mythicalCreatures = creatures.filter(c => c.rarity === 'mythical')
+  const spells = cards.filter(c => c.type === 'spell' && (c.rarity === 'basic' || c.rarity === 'uncommon'))
 
-  // AI deck is mostly commons with a few uncommons - NO rare/epic/legendary
-  // Add 4 uncommon creatures
-  for (let i = 0; i < 4 && uncommonCreatures.length > 0; i++) {
+  // 2 mythical creatures
+  for (let i = 0; i < 2 && mythicalCreatures.length > 0; i++) {
+    aiCards.push(mythicalCreatures[Math.floor(Math.random() * mythicalCreatures.length)].id)
+  }
+
+  // 6 uncommon creatures
+  for (let i = 0; i < 6 && uncommonCreatures.length > 0; i++) {
     aiCards.push(uncommonCreatures[Math.floor(Math.random() * uncommonCreatures.length)].id)
   }
 
-  // Fill rest with common creatures (16 commons)
+  // 2 spells
+  for (let i = 0; i < 2 && spells.length > 0; i++) {
+    aiCards.push(spells[Math.floor(Math.random() * spells.length)].id)
+  }
+
+  // Fill rest with common creatures
   while (aiCards.length < 20) {
     aiCards.push(commonCreatures[Math.floor(Math.random() * commonCreatures.length)].id)
   }
 
-  return aiCards.slice(0, 20)
+  return shuffleArray(aiCards).slice(0, 20)
 }
 
 // Create AI deck for challenge mode with specific rarities
@@ -333,7 +344,7 @@ function createChallengeBattlePlayer(deckCardIds: string[], isPlayer: boolean, h
   const shuffledDeck = shuffleArray(cardIds)
   const hand: BattleCard[] = []
 
-  const drawCount = isPlayer ? 6 : 4
+  const drawCount = 5
   for (let i = 0; i < drawCount && shuffledDeck.length > 0; i++) {
     const cardId = shuffledDeck.shift()!
     const card = getCardById(cardId)
@@ -345,8 +356,8 @@ function createChallengeBattlePlayer(deckCardIds: string[], isPlayer: boolean, h
   return {
     hp: 100,
     maxHp: 100,
-    energy: isPlayer ? 3 : 2,
-    maxEnergy: isPlayer ? 3 : 2,
+    energy: 3,
+    maxEnergy: 3,
     deck: shuffledDeck,
     hand,
     active: null,
@@ -411,6 +422,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
   showCoinFlip: false,
   coinFlipResult: null,
   coinFlipComplete: false,
+  setupPhase: false,
   needsToChooseActive: false,
 
   // Bench targeting defaults
@@ -442,8 +454,8 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     const player = createBattlePlayer(deckCardIds, true)  // true = isPlayer
     const enemy = createBattlePlayer(createAIDeck(), false)
 
-    // Player goes first 80% of the time (easier like Pokemon TCG Pocket)
-    const coinFlipResult: 'player' | 'enemy' = Math.random() < 0.8 ? 'player' : 'enemy'
+    // Fair 50/50 coin flip
+    const coinFlipResult: 'player' | 'enemy' = Math.random() < 0.5 ? 'player' : 'enemy'
 
     set({
       isInBattle: true,
@@ -462,12 +474,13 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       showCoinFlip: true,
       coinFlipResult,
       coinFlipComplete: false,
+      setupPhase: true,
       needsToChooseActive: false,
       isChallengeBattle: false,
       challengeLevel: null,
       knockoutsToWin: 3,
-      aiDamageModifier: 0.7,
-      aiBehavior: 'weakest'
+      aiDamageModifier: 0.85,
+      aiBehavior: 'strongest'
     })
   },
 
@@ -484,8 +497,8 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     const aiDeck = createChallengeAIDeck(level.aiDeckRarities, level.aiUsesSpells)
     const enemy = createChallengeBattlePlayer(aiDeck, false, 0)
 
-    // Challenge mode: player always goes first for fairness
-    const coinFlipResult: 'player' | 'enemy' = 'player'
+    // Fair coin flip for challenge mode too
+    const coinFlipResult: 'player' | 'enemy' = Math.random() < 0.5 ? 'player' : 'enemy'
 
     const battleMessage = level.isBoss
       ? `BOSS BATTLE: ${level.bossName}! First to knock out ${level.knockoutsToWin} cards wins!`
@@ -508,6 +521,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       showCoinFlip: true,
       coinFlipResult,
       coinFlipComplete: false,
+      setupPhase: true,
       needsToChooseActive: false,
       isChallengeBattle: true,
       challengeLevel: level,
@@ -520,51 +534,16 @@ export const useBattleStore = create<BattleState>((set, get) => ({
   completeCoinFlip: () => {
     const state = get()
     const newLog = [`Coin flip: ${state.coinFlipResult === 'player' ? 'You go' : 'Enemy goes'} first!`]
+    newLog.push('Both players must place their starting creature!')
 
-    if (state.coinFlipResult === 'enemy' && state.player && state.enemy) {
-      // Enemy goes first - run their setup turn
-      const newEnemy = { ...state.enemy }
-
-      // AI plays a creature to active if possible
-      const creatures = newEnemy.hand.filter(c => c.type === 'creature')
-      if (creatures.length > 0 && !newEnemy.active) {
-        const chosen = creatures[0]
-        newEnemy.hand = newEnemy.hand.filter(c => c.instanceId !== chosen.instanceId)
-        newEnemy.active = { ...chosen, canAttack: false }
-        newLog.push(`Enemy placed ${chosen.name} as active!`)
-      }
-
-      // Player's turn setup
-      const newPlayer = { ...state.player }
-      newPlayer.maxEnergy = Math.min(10, newPlayer.maxEnergy + 1)
-      newPlayer.energy = newPlayer.maxEnergy
-
-      // Draw a card
-      if (newPlayer.deck.length > 0 && newPlayer.hand.length < MAX_HAND) {
-        const cardId = newPlayer.deck.shift()!
-        const card = getCardById(cardId)
-        if (card) {
-          newPlayer.hand.push(createBattleCard(card, true))
-          newLog.push(`You drew ${card.name}`)
-        }
-      }
-
-      set({
-        showCoinFlip: false,
-        coinFlipComplete: true,
-        player: newPlayer,
-        enemy: newEnemy,
-        turn: 'player',
-        turnNumber: 2,
-        battleLog: newLog
-      })
-    } else {
-      set({
-        showCoinFlip: false,
-        coinFlipComplete: true,
-        battleLog: [...newLog, 'Place a creature as your active card to begin!']
-      })
-    }
+    // Setup phase: player places first, then AI places, then battle begins
+    set({
+      showCoinFlip: false,
+      coinFlipComplete: true,
+      setupPhase: true,
+      turn: 'player',
+      battleLog: [...newLog, 'Place a creature as your active card!']
+    })
   },
 
   endBattle: () => {
@@ -578,11 +557,12 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       showCoinFlip: false,
       coinFlipResult: null,
       coinFlipComplete: false,
+      setupPhase: false,
       isChallengeBattle: false,
       challengeLevel: null,
       knockoutsToWin: 3,
-      aiDamageModifier: 0.7,
-      aiBehavior: 'weakest'
+      aiDamageModifier: 0.85,
+      aiBehavior: 'strongest'
     })
   },
 
@@ -600,11 +580,151 @@ export const useBattleStore = create<BattleState>((set, get) => ({
 
     const newPlayer = { ...state.player }
     newPlayer.hand = newPlayer.hand.filter((_, i) => i !== handIndex)
-    // Card CAN attack on the turn it's played (like Pokemon TCG)
-    newPlayer.active = { ...card, canAttack: true }
 
     // Track card usage
     useGameStore.getState().trackCardUsage(card.id)
+
+    // During setup phase: no attacking yet, AI also places after player
+    if (state.setupPhase && state.enemy) {
+      newPlayer.active = { ...card, canAttack: false }
+
+      const newEnemy = { ...state.enemy }
+      const newLog = [...state.battleLog, `You placed ${card.name} as your active!`]
+
+      // AI places its active card
+      const creatures = newEnemy.hand.filter(c => c.type === 'creature')
+      if (creatures.length > 0 && !newEnemy.active) {
+        // AI picks its strongest creature
+        const chosen = creatures.reduce((best, c) => (c.hp || 0) > (best.hp || 0) ? c : best)
+        newEnemy.hand = newEnemy.hand.filter(c => c.instanceId !== chosen.instanceId)
+        newEnemy.active = { ...chosen, canAttack: false }
+        newLog.push(`Enemy placed ${chosen.name} as active!`)
+      }
+
+      newLog.push('--- Battle begins! ---')
+
+      // Now determine who actually goes first based on coin flip
+      const firstPlayer = state.coinFlipResult || 'player'
+
+      if (firstPlayer === 'player') {
+        // Player's turn — enable attack on their active
+        newPlayer.active = { ...newPlayer.active!, canAttack: true }
+        newLog.push("It's your turn! Attack or place more cards.")
+
+        set({
+          player: newPlayer,
+          enemy: newEnemy,
+          setupPhase: false,
+          turn: 'player',
+          battleLog: newLog
+        })
+      } else {
+        // Enemy goes first — run their first attack turn
+        newLog.push("--- Enemy's Turn ---")
+        newEnemy.maxEnergy = Math.min(10, newEnemy.maxEnergy + 1)
+        newEnemy.energy = newEnemy.maxEnergy
+
+        // Enemy draws
+        if (newEnemy.deck.length > 0 && newEnemy.hand.length < MAX_HAND) {
+          const cardId = newEnemy.deck.shift()!
+          const drawnCard = getCardById(cardId)
+          if (drawnCard) {
+            newEnemy.hand.push(createBattleCard(drawnCard, false))
+          }
+        }
+
+        // AI fills bench
+        let benchFilled = 0
+        while (newEnemy.bench.length < MAX_BENCH && benchFilled < 2) {
+          const benchCreatures = newEnemy.hand.filter(c => c.type === 'creature')
+          if (benchCreatures.length === 0) break
+          const chosen = benchCreatures[0]
+          newEnemy.hand = newEnemy.hand.filter(c => c.instanceId !== chosen.instanceId)
+          newEnemy.bench.push({ ...chosen, canAttack: false, statusEffects: [] })
+          newLog.push(`Enemy placed ${chosen.name} on bench.`)
+          benchFilled++
+        }
+
+        // AI attacks player's active
+        if (newEnemy.active && newEnemy.active.attacks && newPlayer.active) {
+          const activeAttacks = newEnemy.active.attacks
+          newEnemy.active = { ...newEnemy.active, canAttack: true }
+          const affordableAttacks = activeAttacks.filter(a => a.cost <= newEnemy.energy)
+          if (affordableAttacks.length > 0) {
+            const bestAttack = affordableAttacks.reduce((strongest, a) => a.damage > strongest.damage ? a : strongest)
+            newEnemy.energy -= bestAttack.cost
+            const damage = calculateDamage(newEnemy.active, newPlayer.active, bestAttack.damage, true, state.aiDamageModifier)
+            newLog.push(`Enemy's ${newEnemy.active.name} used ${bestAttack.name} for ${damage} damage!`)
+            newPlayer.active.currentHp -= damage
+
+            if (newPlayer.active.currentHp <= 0) {
+              const newEnemyKnockouts = state.enemyKnockouts + 1
+              newLog.push(`Your ${newPlayer.active.name} was knocked out!`)
+              newPlayer.graveyard.push(newPlayer.active.id)
+              newPlayer.active = null
+
+              if (newEnemyKnockouts >= state.knockoutsToWin) {
+                set({
+                  player: newPlayer,
+                  enemy: newEnemy,
+                  enemyKnockouts: newEnemyKnockouts,
+                  setupPhase: false,
+                  isOver: true,
+                  winner: 'enemy',
+                  battleLog: [...newLog, `Enemy knocked out ${state.knockoutsToWin} of your cards! You lose!`]
+                })
+                return
+              }
+
+              if (newPlayer.bench.length > 0) {
+                newLog.push('Choose a card from your bench!')
+                set({
+                  player: newPlayer,
+                  enemy: newEnemy,
+                  enemyKnockouts: newEnemyKnockouts,
+                  setupPhase: false,
+                  needsToChooseActive: true,
+                  battleLog: newLog
+                })
+                return
+              }
+            }
+          }
+          newEnemy.active = { ...newEnemy.active, canAttack: false }
+        }
+
+        // Now it's player's turn
+        newLog.push("--- Your Turn ---")
+        newPlayer.maxEnergy = Math.min(10, newPlayer.maxEnergy + 1)
+        newPlayer.energy = newPlayer.maxEnergy
+
+        if (newPlayer.deck.length > 0 && newPlayer.hand.length < MAX_HAND) {
+          const cardId = newPlayer.deck.shift()!
+          const drawnCard = getCardById(cardId)
+          if (drawnCard) {
+            newPlayer.hand.push(createBattleCard(drawnCard, true))
+            newLog.push(`You drew ${drawnCard.name}`)
+          }
+        }
+
+        if (newPlayer.active) {
+          newPlayer.active = { ...newPlayer.active, canAttack: true }
+        }
+
+        set({
+          player: newPlayer,
+          enemy: newEnemy,
+          setupPhase: false,
+          turn: 'player',
+          turnNumber: 2,
+          battleLog: newLog
+        })
+      }
+      return
+    }
+
+    // Normal (non-setup) play: card can attack on the turn it's placed
+    newPlayer.active = { ...card, canAttack: true }
 
     set({
       player: newPlayer,
@@ -681,6 +801,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
   attack: (attackIndex) => {
     const state = get()
     if (!state.player || !state.enemy || state.turn !== 'player') return
+    if (state.setupPhase) return // Can't attack during setup
     if (!state.player.active || !state.player.active.canAttack) return
 
     const attacker = state.player.active
@@ -941,23 +1062,11 @@ export const useBattleStore = create<BattleState>((set, get) => ({
         newEnemy.active = defender
       }
     } else {
-      // Attack enemy player directly
-      const damage = attackData.damage
-      newEnemy.hp -= damage
-      newLog.push(`${attacker.name} attacked enemy directly for ${damage} damage!`)
-
-      if (newEnemy.hp <= 0) {
-        set({
-          player: newPlayer,
-          enemy: newEnemy,
-          attackUses: newAttackUses,
-          isOver: true,
-          winner: 'player',
-          battleStars: calculateStars(state.enemyKnockouts),
-          battleLog: [...newLog, 'You win!']
-        })
-        return
-      }
+      // No enemy active card — can't attack
+      newLog.push(`No enemy creature to attack!`)
+      newPlayer.energy += attackData.cost // Refund energy
+      set({ player: newPlayer, battleLog: newLog })
+      return
     }
 
     // Mark as attacked

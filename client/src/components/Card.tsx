@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Card as CardType, rarityColors, elementColors } from '../types'
 import { ElementIcon } from './ElementIcon'
 import MasteryBadge from './MasteryBadge'
@@ -20,7 +19,6 @@ interface CardProps {
   isPlayable?: boolean
   isSelected?: boolean
   canAttack?: boolean
-  showDetailsDefault?: boolean
   isFavorite?: boolean
   onFavoriteToggle?: () => void
   masteryXp?: number
@@ -37,7 +35,6 @@ export default function Card({
   isPlayable = false,
   isSelected = false,
   canAttack = false,
-  showDetailsDefault = false,
   isFavorite = false,
   onFavoriteToggle,
   masteryXp,
@@ -46,8 +43,6 @@ export default function Card({
   acquiredAt,
   isVoidTransformed
 }: CardProps) {
-  const [showDetails, setShowDetails] = useState(showDetailsDefault)
-
   const sizeClasses = {
     sm: 'w-32 h-48',
     md: 'w-44 h-64',
@@ -66,11 +61,7 @@ export default function Card({
     celestial: 'rarity-celestial'
   }
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (card.artwork) {
-      e.stopPropagation()
-      setShowDetails(!showDetails)
-    }
+  const handleClick = () => {
     if (onClick) onClick()
   }
 
@@ -186,70 +177,6 @@ export default function Card({
         </div>
       </div>
 
-      {/* Details overlay - shown on click */}
-      <AnimatePresence>
-        {showDetails && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/85 backdrop-blur-sm p-2 flex flex-col"
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between mb-2">
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-white text-sm"
-                style={{ backgroundColor: elementColor }}
-              >
-                {card.cost}
-              </div>
-              {card.type === 'creature' && card.hp && (
-                <div className="bg-red-600 px-2 py-0.5 rounded text-white font-bold text-xs">
-                  ❤️ {card.hp}
-                </div>
-              )}
-            </div>
-
-            {/* Name */}
-            <div className={`font-bold text-center text-white mb-2 ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
-              {card.name}
-            </div>
-
-            {/* Attacks or Effect */}
-            <div className="flex-1 overflow-y-auto space-y-1">
-              {card.attacks?.map((attack, i) => (
-                <div key={i} className="bg-white/10 rounded p-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className={`font-semibold text-white ${size === 'sm' ? 'text-[10px]' : 'text-xs'}`}>
-                      {attack.name}
-                    </span>
-                    <span className="text-yellow-400 font-bold text-xs">{attack.damage}</span>
-                  </div>
-                  <div className="flex justify-between text-white/50 text-[9px]">
-                    <span>Cost: {attack.cost}</span>
-                    {attack.effect && <span className="text-blue-300">{attack.effect}</span>}
-                  </div>
-                </div>
-              ))}
-              {card.effect && (
-                <div className={`text-white/80 text-center ${size === 'sm' ? 'text-[9px]' : 'text-xs'}`}>
-                  {card.effect}
-                </div>
-              )}
-            </div>
-
-            {/* Type line */}
-            <div className={`text-center text-white/50 capitalize mt-1 ${size === 'sm' ? 'text-[8px]' : 'text-[10px]'}`}>
-              {card.rarity} {card.type} • {card.element}
-            </div>
-
-            {/* Tap hint */}
-            <div className="text-center text-white/30 text-[8px] mt-1">
-              tap to close
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Condition visual effects */}
       {condition !== undefined && (

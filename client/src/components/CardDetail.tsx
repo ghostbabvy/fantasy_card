@@ -71,6 +71,14 @@ export default function CardDetail({
         className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
+        {/* Close Button - Top Left */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 left-4 w-8 h-8 bg-white/10 hover:bg-white/30 rounded-full flex items-center justify-center text-white/70 hover:text-white transition-colors z-10"
+        >
+          ✕
+        </button>
+
         {/* Card Header */}
         <div className="flex items-start justify-between mb-4">
           <div>

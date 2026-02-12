@@ -257,9 +257,21 @@ export default function CraftingPage() {
             <div className="container mx-auto flex items-center justify-between gap-6">
               {/* Selected Card Preview */}
               <div className="flex items-center gap-4">
-                <div className="w-20 h-28 rounded-lg overflow-hidden relative">
-                  <Card card={selectedCard} size="sm" />
-                  {(craftAnimation || disenchantAnimation) && (
+                <div
+                  className="w-16 h-22 rounded-lg overflow-hidden relative flex-shrink-0 border"
+                  style={{ borderColor: rarityColors[selectedCard.rarity] }}
+                >
+                  {selectedCard.artwork ? (
+                    <img src={selectedCard.artwork} alt={selectedCard.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div
+                      className="w-full h-full flex items-center justify-center text-2xl"
+                      style={{ background: `linear-gradient(135deg, ${rarityColors[selectedCard.rarity]}40, #1a1a2e)` }}
+                    >
+                      {selectedCard.element === 'fire' ? '🔥' : selectedCard.element === 'water' ? '💧' : selectedCard.element === 'nature' ? '🌿' : selectedCard.element === 'earth' ? '🪨' : selectedCard.element === 'lightning' ? '⚡' : selectedCard.element === 'shadow' ? '🌑' : selectedCard.element === 'light' ? '✨' : '❄️'}
+                    </div>
+                  )}
+                  {(craftAnimation || disenchantAnimation || sellAnimation) && (
                     <motion.div
                       className="absolute inset-0 bg-purple-500/50"
                       animate={{ opacity: [0, 1, 0] }}

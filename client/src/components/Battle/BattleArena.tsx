@@ -83,6 +83,7 @@ export default function BattleArena() {
     swapActive,
     promoteFromBench,
     needsToChooseActive,
+    setupPhase,
     attack,
     useSpell,
     drawCard,
@@ -522,6 +523,19 @@ export default function BattleArena() {
           </div>
         )}
 
+        {/* Setup Phase Banner */}
+        {setupPhase && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-center"
+          >
+            <div className="bg-amber-600/90 text-white px-6 py-2 rounded-full font-bold text-sm">
+              Place a creature as your active to start the battle!
+            </div>
+          </motion.div>
+        )}
+
         {/* Battle Info */}
         <div className="flex items-center justify-center gap-4">
           {/* Challenge Mode indicator */}
@@ -547,14 +561,16 @@ export default function BattleArena() {
             <span className="text-white/50 text-xs ml-2">(First to {knockoutsToWin})</span>
           </div>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={endTurn}
-            className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-bold"
-          >
-            End Turn
-          </motion.button>
+          {!setupPhase && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={endTurn}
+              className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-bold"
+            >
+              End Turn
+            </motion.button>
+          )}
         </div>
 
         {/* Player Side */}
@@ -563,8 +579,8 @@ export default function BattleArena() {
           <div className="flex justify-center mb-4">
             {renderActiveCard(player.active, false)}
 
-            {/* Attack Buttons */}
-            {player.active && player.active.canAttack && player.active.attacks && !selectingBenchTarget && (
+            {/* Attack Buttons - hidden during setup and when enemy has no active */}
+            {player.active && player.active.canAttack && player.active.attacks && !selectingBenchTarget && !setupPhase && enemy.active && (
               <div className="ml-4 flex flex-col justify-center gap-2">
                 {player.active.attacks.map((atk, i) => {
                   const hasHeal = atk.effect?.toLowerCase().includes('heal')
