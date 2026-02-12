@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { authApi, friendsApi, leaderboardApi, giftsApi, chatApi, tradingApi, User, FriendRequest, Gift, Message, Trade, TradeCard } from '../services/api'
 import { useGameStore } from '../stores/gameStore'
 import { getCardById } from '../data/cards'
+import { loadServerState, saveNow, startAutoSave, stopAutoSave } from '../services/gameStateSync'
 
 type SocialTab = 'profile' | 'friends' | 'chat' | 'gifts' | 'trading' | 'leaderboard'
 
@@ -86,6 +87,15 @@ export default function SocialPage() {
     }
   }, [activeTab, user, leaderboardSort])
 
+  // Auto-refresh friends tab every 15 seconds
+  useEffect(() => {
+    if (!user || activeTab !== 'friends') return
+    const interval = setInterval(() => {
+      loadFriends()
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [user, activeTab])
+
   // Scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -99,6 +109,9 @@ export default function SocialPage() {
       if (currentUser) {
         setEditDisplayName(currentUser.displayName || '')
         setEditBio(currentUser.bio || '')
+        // Load saved game state from server and start auto-saving
+        await loadServerState()
+        startAutoSave()
       }
     } catch (e) {
       console.error('Auth check failed:', e)
@@ -131,6 +144,15 @@ export default function SocialPage() {
         setProfilePicture(result.user.profilePicture)
       }
 
+      if (isLoginMode) {
+        // Login: load saved game state from server
+        await loadServerState()
+      } else {
+        // Register: save current local state to server for the new account
+        await saveNow()
+      }
+      startAutoSave()
+
       setUsername('')
       setPassword('')
       setDisplayName('')
@@ -142,6 +164,8 @@ export default function SocialPage() {
   }
 
   const handleLogout = async () => {
+    await saveNow()
+    stopAutoSave()
     await authApi.logout()
     setUser(null)
     setFriends([])

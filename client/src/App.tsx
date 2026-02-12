@@ -1,5 +1,8 @@
+import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Navigation from './components/Navigation'
+import { authApi } from './services/api'
+import { startAutoSave, stopAutoSave, saveOnUnload, loadServerState } from './services/gameStateSync'
 import Home from './pages/Home'
 import CollectionPage from './pages/CollectionPage'
 import ShopPage from './pages/ShopPage'
@@ -18,6 +21,22 @@ import ProfilePage from './pages/ProfilePage'
 import SocialPage from './pages/SocialPage'
 
 function App() {
+  useEffect(() => {
+    if (authApi.isLoggedIn()) {
+      loadServerState().then(() => startAutoSave())
+    }
+
+    const handleBeforeUnload = () => {
+      saveOnUnload()
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      stopAutoSave()
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [])
+
   return (
     <div className="min-h-screen">
       <Navigation />

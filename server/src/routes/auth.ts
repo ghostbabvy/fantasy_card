@@ -5,7 +5,9 @@ import {
   getUserById,
   updateUserProfile,
   getPublicUserInfo,
-  generateToken
+  generateToken,
+  saveGameState,
+  loadGameState
 } from '../db/users.js'
 
 const router = Router()
@@ -161,6 +163,42 @@ router.patch('/profile', authMiddleware, async (req: Request, res: Response) => 
   } catch (error) {
     console.error('Update profile error:', error)
     res.status(500).json({ error: 'Failed to update profile' })
+  }
+})
+
+// Save game state
+router.post('/game-state', authMiddleware, async (req: Request, res: Response) => {
+  const userId = (req as any).userId
+
+  if (!req.body || typeof req.body !== 'object') {
+    return res.status(400).json({ error: 'Invalid game state' })
+  }
+
+  // Reject if too large (2MB)
+  const bodySize = JSON.stringify(req.body).length
+  if (bodySize > 2 * 1024 * 1024) {
+    return res.status(413).json({ error: 'Game state too large' })
+  }
+
+  try {
+    await saveGameState(userId, req.body)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Save game state error:', error)
+    res.status(500).json({ error: 'Failed to save game state' })
+  }
+})
+
+// Load game state
+router.get('/game-state', authMiddleware, async (req: Request, res: Response) => {
+  const userId = (req as any).userId
+
+  try {
+    const gameState = await loadGameState(userId)
+    res.json({ gameState })
+  } catch (error) {
+    console.error('Load game state error:', error)
+    res.status(500).json({ error: 'Failed to load game state' })
   }
 })
 

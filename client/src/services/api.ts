@@ -199,6 +199,26 @@ export const authApi = {
   isLoggedIn(): boolean {
     return !!getToken()
   },
+
+  async saveGameState(state: object): Promise<void> {
+    const res = await fetchWithAuth('/auth/game-state', {
+      method: 'POST',
+      body: JSON.stringify(state),
+    })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || 'Failed to save game state')
+    }
+  },
+
+  async loadGameState(): Promise<object | null> {
+    const res = await fetchWithAuth('/auth/game-state')
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.gameState
+  },
+
+  getToken,
 }
 
 // Friends API

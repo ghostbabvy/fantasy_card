@@ -228,6 +228,11 @@ export async function initUsersDb() {
       )
     `)
 
+    // Add game_state column for full state persistence
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS game_state JSONB DEFAULT NULL
+    `)
+
     dbAvailable = true
     console.log('✅ Database tables initialized')
   } catch (error) {
@@ -1055,4 +1060,21 @@ export async function getAvailableCardQuantity(userId: string, cardId: string): 
   const locked = parseInt(lockedResult.rows[0]?.locked) || 0
 
   return owned - locked
+}
+
+// ========== GAME STATE PERSISTENCE ==========
+
+export async function saveGameState(userId: string, state: object): Promise<void> {
+  await pool.query(
+    `UPDATE users SET game_state = $2 WHERE id = $1`,
+    [userId, JSON.stringify(state)]
+  )
+}
+
+export async function loadGameState(userId: string): Promise<object | null> {
+  const result = await pool.query(
+    `SELECT game_state FROM users WHERE id = $1`,
+    [userId]
+  )
+  return result.rows[0]?.game_state || null
 }
